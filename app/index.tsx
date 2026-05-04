@@ -1,12 +1,33 @@
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../src/services/firebase";
 
 export default function Home() {
   const router = useRouter();
+  const [babies, setBabies] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchBabies = async () => {
+      const snapshot = await getDocs(collection(db, "babies"));
+      const babiesData = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setBabies(babiesData);
+    };
+
+    fetchBabies();
+  }, []);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Nanha Baby Tracker 👶</Text>
+
+      <TouchableOpacity
+        style={styles.button}
+        onPress={() => router.push("/onboarding")}
+      >
+        <Text style={styles.buttonText}>Add Baby</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity
         style={styles.button}

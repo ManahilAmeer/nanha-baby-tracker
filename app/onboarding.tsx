@@ -1,6 +1,7 @@
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { useState } from "react";
 import { useRouter } from "expo-router";
+import { addBaby } from "@/src/services/baby";
 
 export default function Onboarding() {
   const router = useRouter();
@@ -8,10 +9,16 @@ export default function Onboarding() {
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
 
-  const handleStart = () => {
-    if (!name || !dob) return;
-    router.replace("/"); // go to home
-  };
+  const handleStart = async () => {
+  if (!name || !dob) return;
+
+  try {
+    await addBaby({ name, dob });
+
+    router.replace("/"); // go home
+  } catch (error) {
+    console.log(error);
+  }};
 
   return (
     <View style={styles.container}>
