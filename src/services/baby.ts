@@ -1,12 +1,73 @@
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "./firebase";
+import {
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  serverTimestamp,
+  where,
+} from "firebase/firestore";
+import { auth, db } from "./firebase";
 
-export const addBaby = async (baby: {
+export type FeedingType = "breast" | "formula" | "mixed" | "solids";
+export type Sex = "girl" | "boy" | "not-specified";
+
+export type BabyProfile = {
+  id: string;
   name: string;
   dob: string;
-}) => {
+  sex?: Sex;
+  feedingType?: FeedingType;
+  vaccineCountry?: string;
+  remindersEnabled?: boolean;
+};
+
+export type BabyInput = {
+  name: string;
+  dob: string;
+  sex?: Sex;
+  feedingType?: FeedingType;
+  vaccineCountry?: string;
+  remindersEnabled?: boolean;
+};
+
+export const addBaby = async (baby: BabyInput) => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    throw new Error("You need to be signed in before adding a baby profile.");
+  }
+
   return await addDoc(collection(db, "babies"), {
     ...baby,
+    userId,
     createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
   });
+};
+
+export const getPrimaryBaby = async (): Promise<BabyProfile | null> => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    return null;
+  }
+
+  const babyQuery = query(
+    collection(db, "babies"),
+    where("userId", "==", userId)
+  );
+  const snapshot = await getDocs(babyQuery);
+
+  if (snapshot.empty) {
+    return null;
+  }
+
+  const firstBaby = snapshot.docs[0];
+  const data = firstBaby.data() as Omit<BabyProfile, "id">;
+
+  return {
+    id: firstBaby.id,
+    name: data.name,
+    dob: data.dob,
+  };
 };
