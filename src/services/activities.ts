@@ -1,7 +1,11 @@
 import {
   addDoc,
   collection,
+  deleteDoc,
+  doc,
+  getDoc,
   getDocs,
+  orderBy,
   query,
   serverTimestamp,
   Timestamp,
@@ -29,6 +33,15 @@ export type TodayActivitySummary = {
   lastSleep?: Date;
 };
 
+export type ActivityLog = {
+  id: string;
+  babyId: string;
+  type: ActivityType;
+  detail?: string;
+  notes?: string;
+  createdAt?: Date;
+};
+
 export const addActivity = async (activity: ActivityInput) => {
   const userId = auth.currentUser?.uid;
 
@@ -42,6 +55,93 @@ export const addActivity = async (activity: ActivityInput) => {
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
+};
+
+export const getRecentActivities = async (
+  babyId: string,
+  limitCount = 8
+): Promise<ActivityLog[]> => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    return [];
+  }
+
+  const activityQuery = query(
+    collection(db, "activities"),
+    where("userId", "==", userId),
+    where("babyId", "==", babyId),
+    orderBy("createdAt", "desc")
+  );
+
+  const snapshot = await getDocs(activityQuery);
+
+  return snapshot.docs.slice(0, limitCount).map((doc) => {
+    const data = doc.data() as {
+      babyId: string;
+      type: ActivityType;
+      detail?: string;
+      notes?: string;
+      createdAt?: Timestamp;
+    };
+
+    return {
+      id: doc.id,
+      babyId: data.babyId,
+      type: data.type,
+      detail: data.detail,
+      notes: data.notes,
+      createdAt: data.createdAt?.toDate(),
+    };
+  });
+};
+
+export const getActivityById = async (
+  activityId: string
+): Promise<ActivityLog | null> => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    return null;
+  }
+
+  const snapshot = await getDoc(doc(db, "activities", activityId));
+
+  if (!snapshot.exists()) {
+    return null;
+  }
+
+  const data = snapshot.data() as {
+    babyId: string;
+    userId?: string;
+    type: ActivityType;
+    detail?: string;
+    notes?: string;
+    createdAt?: Timestamp;
+  };
+
+  if (data.userId !== userId) {
+    return null;
+  }
+
+  return {
+    id: snapshot.id,
+    babyId: data.babyId,
+    type: data.type,
+    detail: data.detail,
+    notes: data.notes,
+    createdAt: data.createdAt?.toDate(),
+  };
+};
+
+export const deleteActivity = async (activityId: string) => {
+  const activity = await getActivityById(activityId);
+
+  if (!activity) {
+    throw new Error("This activity was not found or you cannot delete it.");
+  }
+
+  return await deleteDoc(doc(db, "activities", activityId));
 };
 
 export const getTodayActivitySummary = async (

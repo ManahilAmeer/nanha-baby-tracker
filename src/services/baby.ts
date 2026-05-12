@@ -45,8 +45,9 @@ export const addBaby = async (baby: BabyInput) => {
   });
 };
 
-export const getPrimaryBaby = async (): Promise<BabyProfile | null> => {
-  const userId = auth.currentUser?.uid;
+export const getPrimaryBaby = async (
+  userId = auth.currentUser?.uid
+): Promise<BabyProfile | null> => {
 
   if (!userId) {
     return null;
@@ -69,5 +70,9 @@ export const getPrimaryBaby = async (): Promise<BabyProfile | null> => {
     id: firstBaby.id,
     name: data.name,
     dob: data.dob,
+    sex: data.sex,
+    feedingType: data.feedingType,
+    vaccineCountry: data.vaccineCountry,
+    remindersEnabled: data.remindersEnabled,
   };
 };

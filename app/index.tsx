@@ -8,11 +8,15 @@ import {
   View,
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { onAuthStateChanged } from "firebase/auth";
 import { type Href, useRouter } from "expo-router";
 
 import { getPrimaryBaby, type BabyProfile } from "../src/services/baby";
+import { auth } from "../src/services/firebase";
 import {
+  getRecentActivities,
   getTodayActivitySummary,
+  type ActivityLog,
   type ActivityType,
   type TodayActivitySummary,
 } from "../src/services/activities";
@@ -50,23 +54,43 @@ export default function Home() {
     sleepMinutes: 0,
     tummyMinutes: 0,
   });
+  const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchDashboard();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      fetchDashboard(user);
+    });
+
+    return unsubscribe;
   }, []);
 
-  const fetchDashboard = async () => {
+  const fetchDashboard = async (user = auth.currentUser) => {
     try {
       setLoading(true);
       setError("");
-      const primaryBaby = await getPrimaryBaby();
+
+      if (!user) {
+        setBaby(null);
+        setRecentActivities([]);
+        return;
+      }
+
+      const primaryBaby = await getPrimaryBaby(user.uid);
 
       setBaby(primaryBaby);
 
       if (primaryBaby) {
-        setSummary(await getTodayActivitySummary(primaryBaby.id));
+        const [todaySummary, activities] = await Promise.all([
+          getTodayActivitySummary(primaryBaby.id),
+          getRecentActivities(primaryBaby.id),
+        ]);
+
+        setSummary(todaySummary);
+        setRecentActivities(activities);
+      } else {
+        setRecentActivities([]);
       }
     } catch (e) {
       console.log(e);
@@ -101,7 +125,10 @@ export default function Home() {
         <View style={styles.stateCard}>
           <Ionicons name="alert-circle-outline" size={30} color="#A84D3F" />
           <Text style={styles.stateText}>{error}</Text>
-          <Pressable style={styles.secondaryButton} onPress={fetchDashboard}>
+          <Pressable
+            style={styles.secondaryButton}
+            onPress={() => fetchDashboard()}
+          >
             <Ionicons name="refresh" size={18} color="#9B6A43" />
             <Text style={styles.secondaryButtonText}>Try again</Text>
           </Pressable>
@@ -188,6 +215,41 @@ export default function Home() {
             ))}
           </View>
 
+          <View style={styles.sectionHeadingRow}>
+            <Text style={styles.sectionTitle}>Recent activity</Text>
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => router.push("/log")}
+            >
+              <Text style={styles.linkText}>Open tracker</Text>
+            </Pressable>
+          </View>
+          <View style={styles.activityList}>
+            {recentActivities.length ? (
+              recentActivities.map((activity) => (
+                <ActivityRow
+                  key={activity.id}
+                  activity={activity}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/activity/[id]",
+                      params: { id: activity.id },
+                    })
+                  }
+                />
+              ))
+            ) : (
+              <View style={styles.emptyActivityCard}>
+                <Ionicons name="albums-outline" size={24} color="#9B6A43" />
+                <Text style={styles.emptyActivityTitle}>No logs yet</Text>
+                <Text style={styles.emptyActivityCopy}>
+                  Use quick actions to save the first feed, diaper, sleep, or
+                  tummy time entry.
+                </Text>
+              </View>
+            )}
+          </View>
+
           <Text style={styles.sectionTitle}>Explore</Text>
           <View style={styles.sectionList}>
             {appSections.map((section) => (
@@ -235,6 +297,85 @@ export default function Home() {
       )}
     </ScrollView>
   );
+}
+
+function ActivityRow({
+  activity,
+  onPress,
+}: {
+  activity: ActivityLog;
+  onPress: () => void;
+}) {
+  const meta = getActivityMeta(activity);
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      style={({ pressed }) => [
+        styles.activityRow,
+        pressed && styles.buttonPressed,
+      ]}
+      onPress={onPress}
+    >
+      <View style={[styles.activityIcon, { backgroundColor: meta.background }]}>
+        <Ionicons name={meta.icon} size={20} color={meta.color} />
+      </View>
+      <View style={styles.activityCopy}>
+        <Text style={styles.activityTitle}>{meta.title}</Text>
+        <Text style={styles.activityDetail}>{meta.detail}</Text>
+        {activity.notes ? (
+          <Text style={styles.activityNotes}>{activity.notes}</Text>
+        ) : null}
+      </View>
+      <Text style={styles.activityTime}>{formatLastEvent(activity.createdAt)}</Text>
+    </Pressable>
+  );
+}
+
+function getActivityMeta(activity: ActivityLog): {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  detail: string;
+  color: string;
+  background: string;
+} {
+  if (activity.type === "feed") {
+    return {
+      icon: "water-outline",
+      title: "Feed",
+      detail: activity.detail || "Logged feeding",
+      color: "#6F8B63",
+      background: "#E8EEDC",
+    };
+  }
+
+  if (activity.type === "diaper") {
+    return {
+      icon: "invert-mode-outline",
+      title: "Diaper",
+      detail: activity.detail || "Diaper change",
+      color: "#9B6A43",
+      background: "#EADBC8",
+    };
+  }
+
+  if (activity.type === "sleep") {
+    return {
+      icon: "moon-outline",
+      title: "Sleep",
+      detail: activity.detail ? `${activity.detail} minutes` : "Sleep logged",
+      color: "#6E7895",
+      background: "#E4E5DD",
+    };
+  }
+
+  return {
+    icon: "timer-outline",
+    title: "Tummy time",
+    detail: activity.detail ? `${activity.detail} minutes` : "Tummy time",
+    color: "#A06B54",
+    background: "#F0DED2",
+  };
 }
 
 function StatusCard({
@@ -439,6 +580,16 @@ const styles = StyleSheet.create({
     marginTop: 24,
     marginBottom: 12,
   },
+  sectionHeadingRow: {
+    marginTop: 12,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  linkText: {
+    color: "#9B6A43",
+    fontWeight: "800",
+  },
   actionGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -458,6 +609,70 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: "#FFF9F0",
     fontWeight: "800",
+  },
+  activityList: {
+    gap: 10,
+  },
+  activityRow: {
+    minHeight: 78,
+    backgroundColor: "#FFF9F0",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  activityIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activityCopy: {
+    flex: 1,
+  },
+  activityTitle: {
+    color: "#3A332A",
+    fontSize: 16,
+    fontWeight: "800",
+    marginBottom: 3,
+  },
+  activityDetail: {
+    color: "#6F6253",
+    fontWeight: "700",
+  },
+  activityNotes: {
+    color: "#8B7258",
+    marginTop: 4,
+    lineHeight: 18,
+  },
+  activityTime: {
+    color: "#8B7258",
+    fontSize: 12,
+    fontWeight: "800",
+  },
+  emptyActivityCard: {
+    backgroundColor: "#FFF9F0",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    padding: 18,
+    alignItems: "center",
+  },
+  emptyActivityTitle: {
+    color: "#3A332A",
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 10,
+    marginBottom: 6,
+  },
+  emptyActivityCopy: {
+    color: "#6F6253",
+    lineHeight: 20,
+    textAlign: "center",
   },
   sectionList: {
     gap: 10,
