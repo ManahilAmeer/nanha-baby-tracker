@@ -9,6 +9,7 @@ import {
   query,
   serverTimestamp,
   Timestamp,
+  updateDoc,
   where,
 } from "firebase/firestore";
 
@@ -142,6 +143,23 @@ export const deleteActivity = async (activityId: string) => {
   }
 
   return await deleteDoc(doc(db, "activities", activityId));
+};
+
+export const updateActivity = async (
+  activityId: string,
+  activity: Pick<ActivityInput, "detail" | "notes">
+) => {
+  const existingActivity = await getActivityById(activityId);
+
+  if (!existingActivity) {
+    throw new Error("This activity was not found or you cannot update it.");
+  }
+
+  return await updateDoc(doc(db, "activities", activityId), {
+    detail: activity.detail,
+    notes: activity.notes,
+    updatedAt: serverTimestamp(),
+  });
 };
 
 export const getTodayActivitySummary = async (

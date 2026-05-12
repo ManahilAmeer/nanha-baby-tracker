@@ -5,6 +5,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
@@ -13,6 +14,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   deleteActivity,
   getActivityById,
+  updateActivity,
   type ActivityLog,
 } from "../../src/services/activities";
 
@@ -21,7 +23,10 @@ export default function ActivityDetailScreen() {
   const { id } = useLocalSearchParams<{ id?: string }>();
 
   const [activity, setActivity] = useState<ActivityLog | null>(null);
+  const [detail, setDetail] = useState("");
+  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
 
@@ -48,6 +53,8 @@ export default function ActivityDetailScreen() {
       }
 
       setActivity(activityLog);
+      setDetail(activityLog.detail ?? "");
+      setNotes(activityLog.notes ?? "");
     } catch (loadError) {
       console.log(loadError);
       setError("We could not load this activity.");
@@ -59,6 +66,29 @@ export default function ActivityDetailScreen() {
   useEffect(() => {
     loadActivity();
   }, [loadActivity]);
+
+  const handleSave = async () => {
+    if (!id) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      await updateActivity(id, {
+        detail: detail.trim(),
+        notes: notes.trim(),
+      });
+      router.replace("/");
+    } catch (saveError) {
+      console.log(saveError);
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "We could not save this activity."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleDelete = async () => {
     if (!id) return;
@@ -112,17 +142,60 @@ export default function ActivityDetailScreen() {
             </View>
 
             <DetailRow label="Type" value={meta.title} />
-            <DetailRow label="Details" value={meta.detail} />
             <DetailRow
               label="Logged at"
               value={formatActivityDate(activity.createdAt)}
             />
-            <DetailRow label="Notes" value={activity.notes || "No notes"} />
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Details</Text>
+              <TextInput
+                placeholder={getDetailPlaceholder(activity.type)}
+                placeholderTextColor="#A8957D"
+                value={detail}
+                onChangeText={setDetail}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Notes</Text>
+              <TextInput
+                multiline
+                placeholder="Optional little note"
+                placeholderTextColor="#A8957D"
+                value={notes}
+                onChangeText={setNotes}
+                style={[styles.input, styles.notesInput]}
+              />
+            </View>
           </View>
+
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
           <Pressable
             accessibilityRole="button"
-            disabled={deleting}
+            disabled={saving || deleting}
+            style={({ pressed }) => [
+              styles.saveButton,
+              pressed && !saving && !deleting && styles.buttonPressed,
+              (saving || deleting) && styles.buttonDisabled,
+            ]}
+            onPress={handleSave}
+          >
+            {saving ? (
+              <ActivityIndicator color="#FFF9F0" />
+            ) : (
+              <>
+                <Ionicons name="checkmark" size={22} color="#FFF9F0" />
+                <Text style={styles.saveText}>Save changes</Text>
+              </>
+            )}
+          </Pressable>
+
+          <Pressable
+            accessibilityRole="button"
+            disabled={deleting || saving}
             style={({ pressed }) => [
               styles.deleteButton,
               pressed && !deleting && styles.buttonPressed,
@@ -152,6 +225,13 @@ function DetailRow({ label, value }: { label: string; value: string }) {
       <Text style={styles.detailValue}>{value}</Text>
     </View>
   );
+}
+
+function getDetailPlaceholder(type: ActivityLog["type"]) {
+  if (type === "feed") return "e.g. Breast, 90 ml, left side";
+  if (type === "diaper") return "e.g. Wet, dirty, both";
+  if (type === "sleep") return "Minutes slept";
+  return "Minutes of tummy time";
 }
 
 function getActivityMeta(activity: ActivityLog): {
@@ -285,6 +365,54 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "800",
     lineHeight: 23,
+  },
+  inputGroup: {
+    borderTopWidth: 1,
+    borderTopColor: "#E6D8C8",
+    paddingTop: 14,
+    gap: 8,
+  },
+  inputLabel: {
+    color: "#8B7258",
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  input: {
+    minHeight: 52,
+    backgroundColor: "#FBF4EA",
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    color: "#3A332A",
+    fontSize: 16,
+  },
+  notesInput: {
+    minHeight: 96,
+    paddingTop: 14,
+    textAlignVertical: "top",
+  },
+  errorText: {
+    color: "#A84D3F",
+    fontWeight: "700",
+    lineHeight: 20,
+    marginTop: 14,
+  },
+  saveButton: {
+    minHeight: 54,
+    borderRadius: 8,
+    backgroundColor: "#9B6A43",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 18,
+  },
+  saveText: {
+    color: "#FFF9F0",
+    fontSize: 16,
+    fontWeight: "800",
   },
   deleteButton: {
     minHeight: 54,
