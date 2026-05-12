@@ -47,3 +47,7 @@ app-example
 # generated native folders
 /ios
 /android
+*.md
+docs/jira_import.csv
+package-lock.json
+package.json
