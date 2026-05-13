@@ -50,15 +50,25 @@ const diaperOptions = ["Wet", "Dirty", "Both"];
 const feedTypes = ["Breast", "Formula", "Solid"];
 const sleepTypes = ["Day nap", "Night sleep"];
 
+function getDefaultDetail(activityType: ActivityType) {
+  if (activityType === "feed") return "Breast";
+  if (activityType === "diaper") return "Wet";
+  if (activityType === "sleep") return "Day nap";
+  return "";
+}
+
 export default function LogScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ type?: ActivityType }>();
+  const initialType = params.type ?? "feed";
 
   const [baby, setBaby] = useState<BabyProfile | null>(null);
-  const [type, setType] = useState<ActivityType>(params.type ?? "feed");
-  const [detail, setDetail] = useState("");
+  const [type, setType] = useState<ActivityType>(initialType);
+  const [detail, setDetail] = useState(getDefaultDetail(initialType));
   const [secondaryDetail, setSecondaryDetail] = useState("");
   const [notes, setNotes] = useState("");
+  const [sleepStartedAt, setSleepStartedAt] = useState<Date | null>(null);
+  const [timerNow, setTimerNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -67,10 +77,29 @@ export default function LogScreen() {
     loadBaby();
   }, []);
 
+  useEffect(() => {
+    if (!sleepStartedAt) return;
+
+    const interval = setInterval(() => {
+      setTimerNow(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [sleepStartedAt]);
+
   const selectedActivity = useMemo(
     () => activityTypes.find((activity) => activity.type === type),
     [type]
   );
+
+  const elapsedSleepMinutes = useMemo(() => {
+    if (!sleepStartedAt) return 0;
+
+    return Math.max(
+      1,
+      Math.ceil((timerNow.getTime() - sleepStartedAt.getTime()) / 60000)
+    );
+  }, [sleepStartedAt, timerNow]);
 
   const loadBaby = async () => {
     try {
@@ -86,19 +115,10 @@ export default function LogScreen() {
 
   const handleSelectType = (nextType: ActivityType) => {
     setType(nextType);
-    setMessage("");
-
-    if (nextType === "diaper") {
-      setDetail("Wet");
-    } else if (nextType === "feed") {
-      setDetail("Breast");
-    } else if (nextType === "sleep") {
-      setDetail("Day nap");
-    } else {
-      setDetail("");
-    }
-
+    setDetail(getDefaultDetail(nextType));
     setSecondaryDetail("");
+    setSleepStartedAt(null);
+    setMessage("");
   };
 
   const handleSave = async () => {
@@ -144,6 +164,51 @@ export default function LogScreen() {
         error instanceof Error
           ? error.message
           : "We could not save this activity. Please try again."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartSleepTimer = () => {
+    setSleepStartedAt(new Date());
+    setTimerNow(new Date());
+    setSecondaryDetail("");
+    setMessage("");
+  };
+
+  const handleStopSleepTimer = async () => {
+    if (!baby || !sleepStartedAt) return;
+
+    const endedAt = new Date();
+    const durationMinutes = Math.max(
+      1,
+      Math.ceil((endedAt.getTime() - sleepStartedAt.getTime()) / 60000)
+    );
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await addActivity({
+        babyId: baby.id,
+        type: "sleep",
+        detail: String(durationMinutes),
+        notes: notes.trim(),
+        startedAt: sleepStartedAt,
+        endedAt,
+      });
+
+      setSleepStartedAt(null);
+      setSecondaryDetail("");
+      setNotes("");
+      router.replace("/");
+    } catch (error) {
+      console.log(error);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not save this sleep session."
       );
     } finally {
       setSaving(false);
@@ -288,6 +353,37 @@ export default function LogScreen() {
 
             {type === "sleep" ? (
               <>
+                <View style={styles.timerCard}>
+                  <View>
+                    <Text style={styles.timerLabel}>Sleep timer</Text>
+                    <Text style={styles.timerValue}>
+                      {sleepStartedAt
+                        ? `${elapsedSleepMinutes} min`
+                        : "Ready to start"}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={saving}
+                    style={[
+                      styles.timerButton,
+                      sleepStartedAt && styles.stopTimerButton,
+                    ]}
+                    onPress={
+                      sleepStartedAt
+                        ? handleStopSleepTimer
+                        : handleStartSleepTimer
+                    }
+                  >
+                    {saving && sleepStartedAt ? (
+                      <ActivityIndicator color="#FFF9F0" />
+                    ) : (
+                      <Text style={styles.timerButtonText}>
+                        {sleepStartedAt ? "Stop & save" : "Start"}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
                 <View style={styles.inputGroup}>
                   <Text style={styles.label}>Sleep type</Text>
                   <View style={styles.optionRow}>
@@ -318,7 +414,7 @@ export default function LogScreen() {
                   </View>
                 </View>
                 <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Duration</Text>
+                  <Text style={styles.label}>Manual duration</Text>
                   <TextInput
                     keyboardType="number-pad"
                     placeholder="Minutes slept"
@@ -528,6 +624,46 @@ const styles = StyleSheet.create({
   },
   selectedOptionButtonText: {
     color: "#FFF9F0",
+  },
+  timerCard: {
+    minHeight: 82,
+    backgroundColor: "#F5F0E2",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D9C5A8",
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  timerLabel: {
+    color: "#8B7258",
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  timerValue: {
+    color: "#3A332A",
+    fontSize: 24,
+    fontWeight: "800",
+  },
+  timerButton: {
+    minHeight: 44,
+    minWidth: 100,
+    borderRadius: 8,
+    backgroundColor: "#6F8B63",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 14,
+  },
+  stopTimerButton: {
+    backgroundColor: "#9B6A43",
+  },
+  timerButtonText: {
+    color: "#FFF9F0",
+    fontWeight: "800",
   },
   messageText: {
     color: "#A84D3F",

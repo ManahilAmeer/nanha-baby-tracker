@@ -146,6 +146,18 @@ export default function ActivityDetailScreen() {
               label="Logged at"
               value={formatActivityDate(activity.createdAt)}
             />
+            {activity.startedAt ? (
+              <DetailRow
+                label="Started"
+                value={formatActivityDate(activity.startedAt)}
+              />
+            ) : null}
+            {activity.endedAt ? (
+              <DetailRow
+                label="Ended"
+                value={formatActivityDate(activity.endedAt)}
+              />
+            ) : null}
 
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Details</Text>

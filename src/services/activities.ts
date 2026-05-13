@@ -22,6 +22,8 @@ export type ActivityInput = {
   type: ActivityType;
   detail?: string;
   notes?: string;
+  startedAt?: Date;
+  endedAt?: Date;
 };
 
 export type TodayActivitySummary = {
@@ -41,6 +43,8 @@ export type ActivityLog = {
   detail?: string;
   notes?: string;
   createdAt?: Date;
+  startedAt?: Date;
+  endedAt?: Date;
 };
 
 export const addActivity = async (activity: ActivityInput) => {
@@ -84,6 +88,8 @@ export const getRecentActivities = async (
       detail?: string;
       notes?: string;
       createdAt?: Timestamp;
+      startedAt?: Timestamp;
+      endedAt?: Timestamp;
     };
 
     return {
@@ -93,6 +99,8 @@ export const getRecentActivities = async (
       detail: data.detail,
       notes: data.notes,
       createdAt: data.createdAt?.toDate(),
+      startedAt: data.startedAt?.toDate(),
+      endedAt: data.endedAt?.toDate(),
     };
   });
 };
@@ -119,6 +127,8 @@ export const getActivityById = async (
     detail?: string;
     notes?: string;
     createdAt?: Timestamp;
+    startedAt?: Timestamp;
+    endedAt?: Timestamp;
   };
 
   if (data.userId !== userId) {
@@ -132,6 +142,8 @@ export const getActivityById = async (
     detail: data.detail,
     notes: data.notes,
     createdAt: data.createdAt?.toDate(),
+    startedAt: data.startedAt?.toDate(),
+    endedAt: data.endedAt?.toDate(),
   };
 };
 
