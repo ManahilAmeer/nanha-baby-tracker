@@ -254,20 +254,26 @@ function getActivityMeta(activity: ActivityLog): {
   background: string;
 } {
   if (activity.type === "feed") {
+    const feedingType = getMetadataString(activity, "feedingType");
+    const amountOrSide = getMetadataString(activity, "amountOrSide");
+    const detail = [feedingType, amountOrSide].filter(Boolean).join(" - ");
+
     return {
       icon: "water-outline",
       title: "Feed",
-      detail: activity.detail || "Logged feeding",
+      detail: detail || activity.detail || "Logged feeding",
       color: "#6F8B63",
       background: "#E8EEDC",
     };
   }
 
   if (activity.type === "diaper") {
+    const diaperType = getMetadataString(activity, "diaperType");
+
     return {
       icon: "invert-mode-outline",
       title: "Diaper",
-      detail: activity.detail || "Diaper change",
+      detail: diaperType || activity.detail || "Diaper change",
       color: "#9B6A43",
       background: "#EADBC8",
     };
@@ -290,6 +296,12 @@ function getActivityMeta(activity: ActivityLog): {
     color: "#A06B54",
     background: "#F0DED2",
   };
+}
+
+function getMetadataString(activity: ActivityLog, key: string) {
+  const value = activity.metadata?.[key];
+
+  return typeof value === "string" ? value : "";
 }
 
 function formatActivityDate(date?: Date) {

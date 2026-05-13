@@ -160,6 +160,7 @@ export default function LogScreen() {
         type,
         detail: getActivityDetailForSave(type, detail, secondaryDetail),
         notes: notes.trim(),
+        metadata: getActivityMetadataForSave(type, detail, secondaryDetail),
       });
 
       setDetail(type === "diaper" ? "Wet" : type === "feed" ? "Breast" : "");
@@ -208,6 +209,10 @@ export default function LogScreen() {
         notes: notes.trim(),
         startedAt: sleepStartedAt,
         endedAt,
+        metadata: {
+          sleepType: detail,
+          durationMinutes,
+        },
       });
 
       setSleepStartedAt(null);
@@ -254,6 +259,9 @@ export default function LogScreen() {
         notes: notes.trim(),
         startedAt: tummyStartedAt,
         endedAt,
+        metadata: {
+          durationMinutes,
+        },
       });
 
       setTummyStartedAt(null);
@@ -588,6 +596,38 @@ function getActivityDetailForSave(
   }
 
   return cleanDetail;
+}
+
+function getActivityMetadataForSave(
+  type: ActivityType,
+  detail: string,
+  secondaryDetail: string
+): Record<string, string | number | boolean> {
+  const cleanDetail = detail.trim();
+  const cleanSecondaryDetail = secondaryDetail.trim();
+
+  if (type === "feed") {
+    return {
+      feedingType: cleanDetail,
+      amountOrSide: cleanSecondaryDetail,
+    };
+  }
+
+  if (type === "diaper") {
+    return {
+      diaperType: cleanDetail,
+      wet: cleanDetail === "Wet" || cleanDetail === "Both",
+      soiled: cleanDetail === "Dirty" || cleanDetail === "Both",
+    };
+  }
+
+  if (type === "sleep" || type === "tummy") {
+    return {
+      durationMinutes: Number.parseInt(cleanSecondaryDetail || "0", 10),
+    };
+  }
+
+  return {};
 }
 
 const styles = StyleSheet.create({

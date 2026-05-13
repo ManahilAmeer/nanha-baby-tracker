@@ -24,6 +24,7 @@ export type ActivityInput = {
   notes?: string;
   startedAt?: Date;
   endedAt?: Date;
+  metadata?: Record<string, string | number | boolean>;
 };
 
 export type TodayActivitySummary = {
@@ -45,6 +46,7 @@ export type ActivityLog = {
   createdAt?: Date;
   startedAt?: Date;
   endedAt?: Date;
+  metadata?: Record<string, string | number | boolean>;
 };
 
 export const addActivity = async (activity: ActivityInput) => {
@@ -90,6 +92,7 @@ export const getRecentActivities = async (
       createdAt?: Timestamp;
       startedAt?: Timestamp;
       endedAt?: Timestamp;
+      metadata?: Record<string, string | number | boolean>;
     };
 
     return {
@@ -101,6 +104,7 @@ export const getRecentActivities = async (
       createdAt: data.createdAt?.toDate(),
       startedAt: data.startedAt?.toDate(),
       endedAt: data.endedAt?.toDate(),
+      metadata: data.metadata,
     };
   });
 };
@@ -129,6 +133,7 @@ export const getActivityById = async (
     createdAt?: Timestamp;
     startedAt?: Timestamp;
     endedAt?: Timestamp;
+    metadata?: Record<string, string | number | boolean>;
   };
 
   if (data.userId !== userId) {
@@ -144,6 +149,7 @@ export const getActivityById = async (
     createdAt: data.createdAt?.toDate(),
     startedAt: data.startedAt?.toDate(),
     endedAt: data.endedAt?.toDate(),
+    metadata: data.metadata,
   };
 };
 
