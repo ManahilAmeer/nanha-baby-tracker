@@ -1,31 +1,229 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
+import { getPrimaryBaby, type BabyProfile } from "../src/services/baby";
+import {
+  addGrowthEntry,
+  getGrowthEntries,
+  type GrowthEntry,
+} from "../src/services/growth";
+
 export default function GrowthDashboard() {
+  const [baby, setBaby] = useState<BabyProfile | null>(null);
+  const [entries, setEntries] = useState<GrowthEntry[]>([]);
+  const [measuredAt, setMeasuredAt] = useState(new Date().toISOString().slice(0, 10));
+  const [weightKg, setWeightKg] = useState("");
+  const [heightCm, setHeightCm] = useState("");
+  const [headCm, setHeadCm] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    loadGrowth();
+  }, []);
+
+  const latestEntry = entries[0] ?? null;
+
+  const loadGrowth = async () => {
+    try {
+      setLoading(true);
+      setMessage("");
+      const primaryBaby = await getPrimaryBaby();
+
+      setBaby(primaryBaby);
+
+      if (primaryBaby) {
+        setEntries(await getGrowthEntries(primaryBaby.id));
+      }
+    } catch (error) {
+      console.log(error);
+      setMessage("We could not load growth data.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!baby) {
+      setMessage("Add a baby profile before adding growth data.");
+      return;
+    }
+
+    if (!weightKg.trim() && !heightCm.trim() && !headCm.trim()) {
+      setMessage("Add at least one measurement.");
+      return;
+    }
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await addGrowthEntry({
+        babyId: baby.id,
+        measuredAt: measuredAt.trim(),
+        weightKg: parseOptionalNumber(weightKg),
+        heightCm: parseOptionalNumber(heightCm),
+        headCm: parseOptionalNumber(headCm),
+      });
+
+      setWeightKg("");
+      setHeightCm("");
+      setHeadCm("");
+      setEntries(await getGrowthEntries(baby.id));
+      setMessage("Growth entry saved.");
+    } catch (error) {
+      console.log(error);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not save this growth entry."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
+    <ScrollView
+      style={styles.screen}
+      contentContainerStyle={styles.container}
+      keyboardShouldPersistTaps="handled"
+      showsVerticalScrollIndicator={false}
+    >
       <Text style={styles.kicker}>Growth dashboard</Text>
       <Text style={styles.title}>Measurements over time</Text>
       <Text style={styles.subtitle}>
-        Store weight, height, and head circumference first. Percentile charts
-        can be layered in once the WHO dataset is ready.
+        Start by storing measurements. Percentile charts can be added once the
+        WHO dataset is ready.
       </Text>
 
-      <View style={styles.grid}>
-        <GrowthCard label="Weight" value="No entry" />
-        <GrowthCard label="Height" value="No entry" />
-        <GrowthCard label="Head" value="No entry" />
-        <GrowthCard label="Percentile" value="Later" />
-      </View>
+      {loading ? (
+        <View style={styles.stateCard}>
+          <ActivityIndicator color="#9B6A43" />
+          <Text style={styles.stateText}>Loading growth data...</Text>
+        </View>
+      ) : (
+        <>
+          <View style={styles.grid}>
+            <GrowthCard
+              label="Weight"
+              value={formatMeasurement(latestEntry?.weightKg, "kg")}
+            />
+            <GrowthCard
+              label="Height"
+              value={formatMeasurement(latestEntry?.heightCm, "cm")}
+            />
+            <GrowthCard
+              label="Head"
+              value={formatMeasurement(latestEntry?.headCm, "cm")}
+            />
+            <GrowthCard
+              label="Latest date"
+              value={latestEntry?.measuredAt ?? "No entry"}
+            />
+          </View>
 
-      <Pressable style={styles.button}>
-        <Ionicons name="add" size={22} color="#FFF9F0" />
-        <Text style={styles.buttonText}>Add growth entry</Text>
-      </Pressable>
+          <View style={styles.formCard}>
+            <Text style={styles.formTitle}>Add growth entry</Text>
 
-      <Pressable style={styles.secondaryButton}>
-        <Text style={styles.secondaryButtonText}>View history</Text>
-      </Pressable>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Measurement date</Text>
+              <TextInput
+                placeholder="YYYY-MM-DD"
+                placeholderTextColor="#A8957D"
+                value={measuredAt}
+                onChangeText={setMeasuredAt}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Weight</Text>
+              <TextInput
+                keyboardType="decimal-pad"
+                placeholder="kg"
+                placeholderTextColor="#A8957D"
+                value={weightKg}
+                onChangeText={setWeightKg}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Height</Text>
+              <TextInput
+                keyboardType="decimal-pad"
+                placeholder="cm"
+                placeholderTextColor="#A8957D"
+                value={heightCm}
+                onChangeText={setHeightCm}
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Head circumference</Text>
+              <TextInput
+                keyboardType="decimal-pad"
+                placeholder="cm"
+                placeholderTextColor="#A8957D"
+                value={headCm}
+                onChangeText={setHeadCm}
+                style={styles.input}
+              />
+            </View>
+
+            {message ? <Text style={styles.messageText}>{message}</Text> : null}
+
+            <Pressable
+              accessibilityRole="button"
+              disabled={saving}
+              style={({ pressed }) => [
+                styles.button,
+                pressed && !saving && styles.buttonPressed,
+                saving && styles.buttonDisabled,
+              ]}
+              onPress={handleSave}
+            >
+              {saving ? (
+                <ActivityIndicator color="#FFF9F0" />
+              ) : (
+                <>
+                  <Ionicons name="add" size={22} color="#FFF9F0" />
+                  <Text style={styles.buttonText}>Save growth entry</Text>
+                </>
+              )}
+            </Pressable>
+          </View>
+
+          <Text style={styles.sectionTitle}>History</Text>
+          {entries.length ? (
+            entries.map((entry) => (
+              <View style={styles.historyRow} key={entry.id}>
+                <Text style={styles.historyDate}>{entry.measuredAt}</Text>
+                <Text style={styles.historyText}>
+                  {formatHistoryEntry(entry)}
+                </Text>
+              </View>
+            ))
+          ) : (
+            <View style={styles.stateCard}>
+              <Ionicons name="analytics-outline" size={26} color="#9B6A43" />
+              <Text style={styles.stateText}>No growth entries yet.</Text>
+            </View>
+          )}
+        </>
+      )}
     </ScrollView>
   );
 }
@@ -37,6 +235,26 @@ function GrowthCard({ label, value }: { label: string; value: string }) {
       <Text style={styles.cardLabel}>{label}</Text>
     </View>
   );
+}
+
+function parseOptionalNumber(value: string) {
+  const parsedValue = Number.parseFloat(value);
+
+  return Number.isNaN(parsedValue) ? undefined : parsedValue;
+}
+
+function formatMeasurement(value: number | undefined, unit: string) {
+  return typeof value === "number" ? `${value} ${unit}` : "No entry";
+}
+
+function formatHistoryEntry(entry: GrowthEntry) {
+  return [
+    formatMeasurement(entry.weightKg, "kg"),
+    formatMeasurement(entry.heightCm, "cm"),
+    formatMeasurement(entry.headCm, "cm"),
+  ]
+    .filter((value) => value !== "No entry")
+    .join(" · ");
 }
 
 const styles = StyleSheet.create({
@@ -80,6 +298,33 @@ const styles = StyleSheet.create({
   },
   cardValue: { color: "#3A332A", fontSize: 22, fontWeight: "800" },
   cardLabel: { color: "#6F6253", fontWeight: "700" },
+  formCard: {
+    backgroundColor: "#FFF9F0",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    padding: 18,
+    marginTop: 10,
+    gap: 16,
+  },
+  formTitle: { color: "#3A332A", fontSize: 20, fontWeight: "800" },
+  inputGroup: { gap: 8 },
+  label: { color: "#514739", fontSize: 14, fontWeight: "700" },
+  input: {
+    minHeight: 52,
+    backgroundColor: "#FBF4EA",
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    color: "#3A332A",
+    fontSize: 16,
+  },
+  messageText: {
+    color: "#6F6253",
+    fontWeight: "700",
+    lineHeight: 20,
+  },
   button: {
     minHeight: 54,
     borderRadius: 8,
@@ -88,17 +333,45 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
-    marginTop: 10,
   },
+  buttonPressed: { transform: [{ translateY: 1 }] },
+  buttonDisabled: { opacity: 0.72 },
   buttonText: { color: "#FFF9F0", fontSize: 16, fontWeight: "800" },
-  secondaryButton: {
-    minHeight: 50,
+  sectionTitle: {
+    color: "#3A332A",
+    fontSize: 18,
+    fontWeight: "800",
+    marginTop: 24,
+    marginBottom: 12,
+  },
+  historyRow: {
+    backgroundColor: "#FFF9F0",
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: "#D9C5A8",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 12,
+    borderColor: "#DCCBB5",
+    padding: 16,
+    marginBottom: 10,
   },
-  secondaryButtonText: { color: "#8B7258", fontWeight: "800" },
+  historyDate: {
+    color: "#8B7258",
+    fontSize: 12,
+    fontWeight: "800",
+    textTransform: "uppercase",
+    marginBottom: 5,
+  },
+  historyText: { color: "#3A332A", fontSize: 16, fontWeight: "800" },
+  stateCard: {
+    backgroundColor: "#FFF9F0",
+    borderRadius: 8,
+    padding: 22,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+  },
+  stateText: {
+    color: "#6F6253",
+    fontWeight: "700",
+    marginTop: 12,
+    textAlign: "center",
+  },
 });
