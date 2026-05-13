@@ -68,6 +68,7 @@ export default function LogScreen() {
   const [secondaryDetail, setSecondaryDetail] = useState("");
   const [notes, setNotes] = useState("");
   const [sleepStartedAt, setSleepStartedAt] = useState<Date | null>(null);
+  const [tummyStartedAt, setTummyStartedAt] = useState<Date | null>(null);
   const [timerNow, setTimerNow] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -78,14 +79,14 @@ export default function LogScreen() {
   }, []);
 
   useEffect(() => {
-    if (!sleepStartedAt) return;
+    if (!sleepStartedAt && !tummyStartedAt) return;
 
     const interval = setInterval(() => {
       setTimerNow(new Date());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [sleepStartedAt]);
+  }, [sleepStartedAt, tummyStartedAt]);
 
   const selectedActivity = useMemo(
     () => activityTypes.find((activity) => activity.type === type),
@@ -100,6 +101,15 @@ export default function LogScreen() {
       Math.ceil((timerNow.getTime() - sleepStartedAt.getTime()) / 60000)
     );
   }, [sleepStartedAt, timerNow]);
+
+  const elapsedTummyMinutes = useMemo(() => {
+    if (!tummyStartedAt) return 0;
+
+    return Math.max(
+      1,
+      Math.ceil((timerNow.getTime() - tummyStartedAt.getTime()) / 60000)
+    );
+  }, [tummyStartedAt, timerNow]);
 
   const loadBaby = async () => {
     try {
@@ -118,6 +128,7 @@ export default function LogScreen() {
     setDetail(getDefaultDetail(nextType));
     setSecondaryDetail("");
     setSleepStartedAt(null);
+    setTummyStartedAt(null);
     setMessage("");
   };
 
@@ -147,15 +158,14 @@ export default function LogScreen() {
       await addActivity({
         babyId: baby.id,
         type,
-        detail:
-          type === "sleep" || type === "tummy"
-            ? secondaryDetail.trim()
-            : detail.trim(),
+        detail: getActivityDetailForSave(type, detail, secondaryDetail),
         notes: notes.trim(),
       });
 
       setDetail(type === "diaper" ? "Wet" : type === "feed" ? "Breast" : "");
       setSecondaryDetail("");
+      setSleepStartedAt(null);
+      setTummyStartedAt(null);
       setNotes("");
       router.replace("/");
     } catch (error) {
@@ -172,6 +182,7 @@ export default function LogScreen() {
 
   const handleStartSleepTimer = () => {
     setSleepStartedAt(new Date());
+    setTummyStartedAt(null);
     setTimerNow(new Date());
     setSecondaryDetail("");
     setMessage("");
@@ -209,6 +220,52 @@ export default function LogScreen() {
         error instanceof Error
           ? error.message
           : "We could not save this sleep session."
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleStartTummyTimer = () => {
+    setTummyStartedAt(new Date());
+    setSleepStartedAt(null);
+    setTimerNow(new Date());
+    setSecondaryDetail("");
+    setMessage("");
+  };
+
+  const handleStopTummyTimer = async () => {
+    if (!baby || !tummyStartedAt) return;
+
+    const endedAt = new Date();
+    const durationMinutes = Math.max(
+      1,
+      Math.ceil((endedAt.getTime() - tummyStartedAt.getTime()) / 60000)
+    );
+
+    setSaving(true);
+    setMessage("");
+
+    try {
+      await addActivity({
+        babyId: baby.id,
+        type: "tummy",
+        detail: String(durationMinutes),
+        notes: notes.trim(),
+        startedAt: tummyStartedAt,
+        endedAt,
+      });
+
+      setTummyStartedAt(null);
+      setSecondaryDetail("");
+      setNotes("");
+      router.replace("/");
+    } catch (error) {
+      console.log(error);
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "We could not save this tummy time session."
       );
     } finally {
       setSaving(false);
@@ -428,17 +485,50 @@ export default function LogScreen() {
             ) : null}
 
             {type === "tummy" ? (
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Daily tummy time</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  placeholder="Minutes"
-                  placeholderTextColor="#A8957D"
-                  value={secondaryDetail}
-                  onChangeText={setSecondaryDetail}
-                  style={styles.input}
-                />
-              </View>
+              <>
+                <View style={styles.timerCard}>
+                  <View>
+                    <Text style={styles.timerLabel}>Tummy time timer</Text>
+                    <Text style={styles.timerValue}>
+                      {tummyStartedAt
+                        ? `${elapsedTummyMinutes} min`
+                        : "Ready to start"}
+                    </Text>
+                  </View>
+                  <Pressable
+                    accessibilityRole="button"
+                    disabled={saving}
+                    style={[
+                      styles.timerButton,
+                      tummyStartedAt && styles.stopTimerButton,
+                    ]}
+                    onPress={
+                      tummyStartedAt
+                        ? handleStopTummyTimer
+                        : handleStartTummyTimer
+                    }
+                  >
+                    {saving && tummyStartedAt ? (
+                      <ActivityIndicator color="#FFF9F0" />
+                    ) : (
+                      <Text style={styles.timerButtonText}>
+                        {tummyStartedAt ? "Stop & save" : "Start"}
+                      </Text>
+                    )}
+                  </Pressable>
+                </View>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>Manual tummy time</Text>
+                  <TextInput
+                    keyboardType="number-pad"
+                    placeholder="Minutes"
+                    placeholderTextColor="#A8957D"
+                    value={secondaryDetail}
+                    onChangeText={setSecondaryDetail}
+                    style={styles.input}
+                  />
+                </View>
+              </>
             ) : null}
 
             <View style={styles.inputGroup}>
@@ -479,6 +569,25 @@ export default function LogScreen() {
       )}
     </ScrollView>
   );
+}
+
+function getActivityDetailForSave(
+  type: ActivityType,
+  detail: string,
+  secondaryDetail: string
+) {
+  const cleanDetail = detail.trim();
+  const cleanSecondaryDetail = secondaryDetail.trim();
+
+  if (type === "sleep" || type === "tummy") {
+    return cleanSecondaryDetail;
+  }
+
+  if (type === "feed" && cleanSecondaryDetail) {
+    return `${cleanDetail} - ${cleanSecondaryDetail}`;
+  }
+
+  return cleanDetail;
 }
 
 const styles = StyleSheet.create({
