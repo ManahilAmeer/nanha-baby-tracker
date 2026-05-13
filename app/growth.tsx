@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { getPrimaryBaby, type BabyProfile } from "../src/services/baby";
 import {
@@ -18,6 +19,7 @@ import {
 } from "../src/services/growth";
 
 export default function GrowthDashboard() {
+  const router = useRouter();
   const [baby, setBaby] = useState<BabyProfile | null>(null);
   const [entries, setEntries] = useState<GrowthEntry[]>([]);
   const [measuredAt, setMeasuredAt] = useState(new Date().toISOString().slice(0, 10));
@@ -209,12 +211,25 @@ export default function GrowthDashboard() {
           <Text style={styles.sectionTitle}>History</Text>
           {entries.length ? (
             entries.map((entry) => (
-              <View style={styles.historyRow} key={entry.id}>
+              <Pressable
+                accessibilityRole="button"
+                style={({ pressed }) => [
+                  styles.historyRow,
+                  pressed && styles.buttonPressed,
+                ]}
+                key={entry.id}
+                onPress={() =>
+                  router.push({
+                    pathname: "/growth/[id]",
+                    params: { id: entry.id },
+                  })
+                }
+              >
                 <Text style={styles.historyDate}>{entry.measuredAt}</Text>
                 <Text style={styles.historyText}>
                   {formatHistoryEntry(entry)}
                 </Text>
-              </View>
+              </Pressable>
             ))
           ) : (
             <View style={styles.stateCard}>
@@ -254,7 +269,7 @@ function formatHistoryEntry(entry: GrowthEntry) {
     formatMeasurement(entry.headCm, "cm"),
   ]
     .filter((value) => value !== "No entry")
-    .join(" · ");
+    .join(" | ");
 }
 
 const styles = StyleSheet.create({
