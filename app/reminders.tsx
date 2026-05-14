@@ -16,6 +16,7 @@ import {
   type Reminder,
 } from "../src/services/reminders";
 import { getVaccineScheduleReminders } from "../src/services/vaccineSchedule";
+import { syncReminderNotifications } from "../src/services/notifications";
 
 export default function Reminders() {
   const [baby, setBaby] = useState<BabyProfile | null>(null);
@@ -23,6 +24,7 @@ export default function Reminders() {
   const [loading, setLoading] = useState(true);
   const [savingId, setSavingId] = useState("");
   const [message, setMessage] = useState("");
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   useEffect(() => {
     loadReminders();
@@ -32,6 +34,7 @@ export default function Reminders() {
     try {
       setLoading(true);
       setMessage("");
+      setNotificationMessage("");
       const primaryBaby = await getPrimaryBaby();
 
       setBaby(primaryBaby);
@@ -51,7 +54,11 @@ export default function Reminders() {
             !reminder.sourceId || !savedSourceIds.has(reminder.sourceId)
         );
 
-        setReminders([...activeScheduleReminders, ...savedReminders]);
+        const loadedReminders = [...activeScheduleReminders, ...savedReminders];
+        const syncResult = await syncReminderNotifications(loadedReminders);
+
+        setReminders(loadedReminders);
+        setNotificationMessage(getNotificationMessage(syncResult));
       }
     } catch (error) {
       console.log(error);
@@ -74,14 +81,18 @@ export default function Reminders() {
       ...reminder,
       ...updates,
     };
+    const updatedReminders = reminders.map((item) =>
+      item.id === reminder.id ? nextReminder : item
+    );
 
     setSavingId(reminder.id);
-    setReminders((current) =>
-      current.map((item) => (item.id === reminder.id ? nextReminder : item))
-    );
+    setReminders(updatedReminders);
 
     try {
       await saveReminder(nextReminder);
+      const syncResult = await syncReminderNotifications(updatedReminders);
+
+      setNotificationMessage(getNotificationMessage(syncResult));
     } catch (error) {
       console.log(error);
       setReminders((current) =>
@@ -118,6 +129,9 @@ export default function Reminders() {
       ) : (
         <>
           {message ? <Text style={styles.messageText}>{message}</Text> : null}
+          {notificationMessage ? (
+            <Text style={styles.notificationText}>{notificationMessage}</Text>
+          ) : null}
 
           {reminders.map((reminder) => {
             const isSaving = savingId === reminder.id;
@@ -195,6 +209,25 @@ export default function Reminders() {
   );
 }
 
+function getNotificationMessage({
+  scheduled,
+  permissionStatus,
+}: Awaited<ReturnType<typeof syncReminderNotifications>>) {
+  if (permissionStatus === "unsupported") {
+    return "Phone notifications are available on iOS and Android builds.";
+  }
+
+  if (permissionStatus === "denied") {
+    return "Notification permission is off. Reminders are saved in the app only.";
+  }
+
+  if (scheduled === 0) {
+    return "No dated phone notifications are scheduled right now.";
+  }
+
+  return `${scheduled} phone notification${scheduled === 1 ? "" : "s"} scheduled.`;
+}
+
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#FBF4EA" },
   container: { padding: 24, paddingTop: 58, paddingBottom: 32 },
@@ -268,6 +301,12 @@ const styles = StyleSheet.create({
   },
   messageText: {
     color: "#A84D3F",
+    fontWeight: "700",
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  notificationText: {
+    color: "#6F6253",
     fontWeight: "700",
     lineHeight: 20,
     marginBottom: 12,

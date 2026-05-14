@@ -521,7 +521,7 @@ function StatusCard({
 
 function formatBabyAge(dob: string) {
   const birthDate = new Date(dob);
-
+  console.log("Birth date:", birthDate);
   if (Number.isNaN(birthDate.getTime())) {
     return "Age will appear after a valid date";
   }

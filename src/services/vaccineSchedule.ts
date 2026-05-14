@@ -21,11 +21,16 @@ export function getVaccineScheduleRemindersFromRecords(
   baby: BabyProfile,
   records: VaccineRecord[]
 ): Reminder[] {
+  if (!isValidDateString(baby.dob)) {
+    return [];
+  }
+
   const schedule = getVaccineScheduleForCountry(baby.vaccineCountry);
   const today = getDateOnly(new Date());
 
   return schedule
     .map((dose) => buildScheduleReminder(baby, dose))
+    .filter((reminder): reminder is Reminder => Boolean(reminder))
     .filter((reminder) => {
       const dueDate = getDateOnly(new Date(reminder.dueDate ?? ""));
 
@@ -40,9 +45,13 @@ export function getVaccineScheduleRemindersFromRecords(
 function buildScheduleReminder(
   baby: BabyProfile,
   dose: VaccineScheduleDose
-): Reminder {
+): Reminder | null {
   const dueDate = getDoseDueDate(baby.dob, dose);
   const country = baby.vaccineCountry?.trim() || dose.country;
+
+  if (!dueDate) {
+    return null;
+  }
 
   return {
     id: `${baby.id}-schedule-${dose.id}`,
@@ -59,6 +68,10 @@ function buildScheduleReminder(
 
 function getDoseDueDate(dob: string, dose: VaccineScheduleDose) {
   const dueDate = new Date(dob);
+
+  if (Number.isNaN(dueDate.getTime())) {
+    return null;
+  }
 
   if (dose.timing.unit === "days") {
     dueDate.setDate(dueDate.getDate() + dose.timing.value);
@@ -103,4 +116,8 @@ function getDateOnly(date: Date) {
   dateOnly.setHours(0, 0, 0, 0);
 
   return dateOnly;
+}
+
+function isValidDateString(value: string) {
+  return !Number.isNaN(new Date(value).getTime());
 }
