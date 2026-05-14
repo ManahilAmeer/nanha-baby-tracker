@@ -12,16 +12,28 @@ import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
 
 import {
+  getPrimaryBaby,
+  type BabyProfile,
+} from "../../src/services/baby";
+import {
   deleteGrowthEntry,
   getGrowthEntryById,
   updateGrowthEntry,
   type GrowthEntry,
 } from "../../src/services/growth";
+import {
+  formatUnitValue,
+  toDisplayLength,
+  toDisplayWeight,
+  toStoredLength,
+  toStoredWeight,
+} from "../../src/utils/units";
 
 export default function GrowthEntryDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id?: string }>();
 
+  const [baby, setBaby] = useState<BabyProfile | null>(null);
   const [entry, setEntry] = useState<GrowthEntry | null>(null);
   const [measuredAt, setMeasuredAt] = useState("");
   const [weightKg, setWeightKg] = useState("");
@@ -31,6 +43,8 @@ export default function GrowthEntryDetail() {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState("");
+  const weightUnit = baby?.weightUnit ?? "kg";
+  const lengthUnit = baby?.lengthUnit ?? "cm";
 
   const loadEntry = useCallback(async () => {
     if (!id) {
@@ -42,18 +56,37 @@ export default function GrowthEntryDetail() {
     try {
       setLoading(true);
       setError("");
-      const growthEntry = await getGrowthEntryById(id);
+      const [primaryBaby, growthEntry] = await Promise.all([
+        getPrimaryBaby(),
+        getGrowthEntryById(id),
+      ]);
 
       if (!growthEntry) {
         setError("This growth entry was not found.");
         return;
       }
 
+      setBaby(primaryBaby);
       setEntry(growthEntry);
       setMeasuredAt(growthEntry.measuredAt);
-      setWeightKg(formatInputValue(growthEntry.weightKg));
-      setHeightCm(formatInputValue(growthEntry.heightCm));
-      setHeadCm(formatInputValue(growthEntry.headCm));
+      setWeightKg(
+        formatInputValue(
+          growthEntry.weightKg,
+          (value) => toDisplayWeight(value, primaryBaby?.weightUnit ?? "kg")
+        )
+      );
+      setHeightCm(
+        formatInputValue(
+          growthEntry.heightCm,
+          (value) => toDisplayLength(value, primaryBaby?.lengthUnit ?? "cm")
+        )
+      );
+      setHeadCm(
+        formatInputValue(
+          growthEntry.headCm,
+          (value) => toDisplayLength(value, primaryBaby?.lengthUnit ?? "cm")
+        )
+      );
     } catch (loadError) {
       console.log(loadError);
       setError("We could not load this growth entry.");
@@ -79,9 +112,15 @@ export default function GrowthEntryDetail() {
       setError("");
       await updateGrowthEntry(id, {
         measuredAt: measuredAt.trim(),
-        weightKg: parseOptionalNumber(weightKg),
-        heightCm: parseOptionalNumber(heightCm),
-        headCm: parseOptionalNumber(headCm),
+        weightKg: parseOptionalNumber(weightKg, (value) =>
+          toStoredWeight(value, weightUnit)
+        ),
+        heightCm: parseOptionalNumber(heightCm, (value) =>
+          toStoredLength(value, lengthUnit)
+        ),
+        headCm: parseOptionalNumber(headCm, (value) =>
+          toStoredLength(value, lengthUnit)
+        ),
       });
       router.replace("/growth");
     } catch (saveError) {
@@ -151,19 +190,19 @@ export default function GrowthEntryDetail() {
             />
             <GrowthInput
               label="Weight"
-              placeholder="kg"
+              placeholder={weightUnit}
               value={weightKg}
               onChangeText={setWeightKg}
             />
             <GrowthInput
               label="Height"
-              placeholder="cm"
+              placeholder={lengthUnit}
               value={heightCm}
               onChangeText={setHeightCm}
             />
             <GrowthInput
               label="Head circumference"
-              placeholder="cm"
+              placeholder={lengthUnit}
               value={headCm}
               onChangeText={setHeadCm}
             />
@@ -242,14 +281,20 @@ function GrowthInput({
   );
 }
 
-function parseOptionalNumber(value: string) {
+function parseOptionalNumber(
+  value: string,
+  transform: (value: number) => number = (numberValue) => numberValue
+) {
   const parsedValue = Number.parseFloat(value);
 
-  return Number.isNaN(parsedValue) ? undefined : parsedValue;
+  return Number.isNaN(parsedValue) ? undefined : transform(parsedValue);
 }
 
-function formatInputValue(value: number | undefined) {
-  return typeof value === "number" ? String(value) : "";
+function formatInputValue(
+  value: number | undefined,
+  transform: (value: number) => number = (numberValue) => numberValue
+) {
+  return typeof value === "number" ? formatUnitValue(transform(value)) : "";
 }
 
 const styles = StyleSheet.create({

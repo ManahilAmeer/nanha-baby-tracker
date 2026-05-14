@@ -17,6 +17,13 @@ import {
   getGrowthEntries,
   type GrowthEntry,
 } from "../src/services/growth";
+import {
+  formatUnitValue,
+  toDisplayLength,
+  toDisplayWeight,
+  toStoredLength,
+  toStoredWeight,
+} from "../src/utils/units";
 
 export default function GrowthDashboard() {
   const router = useRouter();
@@ -35,6 +42,8 @@ export default function GrowthDashboard() {
   }, []);
 
   const latestEntry = entries[0] ?? null;
+  const weightUnit = baby?.weightUnit ?? "kg";
+  const lengthUnit = baby?.lengthUnit ?? "cm";
 
   const loadGrowth = async () => {
     try {
@@ -73,9 +82,15 @@ export default function GrowthDashboard() {
       await addGrowthEntry({
         babyId: baby.id,
         measuredAt: measuredAt.trim(),
-        weightKg: parseOptionalNumber(weightKg),
-        heightCm: parseOptionalNumber(heightCm),
-        headCm: parseOptionalNumber(headCm),
+        weightKg: parseOptionalNumber(weightKg, (value) =>
+          toStoredWeight(value, weightUnit)
+        ),
+        heightCm: parseOptionalNumber(heightCm, (value) =>
+          toStoredLength(value, lengthUnit)
+        ),
+        headCm: parseOptionalNumber(headCm, (value) =>
+          toStoredLength(value, lengthUnit)
+        ),
       });
 
       setWeightKg("");
@@ -119,15 +134,15 @@ export default function GrowthDashboard() {
           <View style={styles.grid}>
             <GrowthCard
               label="Weight"
-              value={formatMeasurement(latestEntry?.weightKg, "kg")}
+              value={formatWeight(latestEntry?.weightKg, weightUnit)}
             />
             <GrowthCard
               label="Height"
-              value={formatMeasurement(latestEntry?.heightCm, "cm")}
+              value={formatLength(latestEntry?.heightCm, lengthUnit)}
             />
             <GrowthCard
               label="Head"
-              value={formatMeasurement(latestEntry?.headCm, "cm")}
+              value={formatLength(latestEntry?.headCm, lengthUnit)}
             />
             <GrowthCard
               label="Latest date"
@@ -153,7 +168,7 @@ export default function GrowthDashboard() {
               <Text style={styles.label}>Weight</Text>
               <TextInput
                 keyboardType="decimal-pad"
-                placeholder="kg"
+                placeholder={weightUnit}
                 placeholderTextColor="#A8957D"
                 value={weightKg}
                 onChangeText={setWeightKg}
@@ -165,7 +180,7 @@ export default function GrowthDashboard() {
               <Text style={styles.label}>Height</Text>
               <TextInput
                 keyboardType="decimal-pad"
-                placeholder="cm"
+                placeholder={lengthUnit}
                 placeholderTextColor="#A8957D"
                 value={heightCm}
                 onChangeText={setHeightCm}
@@ -177,7 +192,7 @@ export default function GrowthDashboard() {
               <Text style={styles.label}>Head circumference</Text>
               <TextInput
                 keyboardType="decimal-pad"
-                placeholder="cm"
+                placeholder={lengthUnit}
                 placeholderTextColor="#A8957D"
                 value={headCm}
                 onChangeText={setHeadCm}
@@ -227,7 +242,7 @@ export default function GrowthDashboard() {
               >
                 <Text style={styles.historyDate}>{entry.measuredAt}</Text>
                 <Text style={styles.historyText}>
-                  {formatHistoryEntry(entry)}
+                  {formatHistoryEntry(entry, weightUnit, lengthUnit)}
                 </Text>
               </Pressable>
             ))
@@ -252,21 +267,36 @@ function GrowthCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function parseOptionalNumber(value: string) {
+function parseOptionalNumber(
+  value: string,
+  transform: (value: number) => number = (numberValue) => numberValue
+) {
   const parsedValue = Number.parseFloat(value);
 
-  return Number.isNaN(parsedValue) ? undefined : parsedValue;
+  return Number.isNaN(parsedValue) ? undefined : transform(parsedValue);
 }
 
-function formatMeasurement(value: number | undefined, unit: string) {
-  return typeof value === "number" ? `${value} ${unit}` : "No entry";
+function formatWeight(valueKg: number | undefined, unit: "kg" | "lb") {
+  return typeof valueKg === "number"
+    ? `${formatUnitValue(toDisplayWeight(valueKg, unit))} ${unit}`
+    : "No entry";
 }
 
-function formatHistoryEntry(entry: GrowthEntry) {
+function formatLength(valueCm: number | undefined, unit: "cm" | "in") {
+  return typeof valueCm === "number"
+    ? `${formatUnitValue(toDisplayLength(valueCm, unit))} ${unit}`
+    : "No entry";
+}
+
+function formatHistoryEntry(
+  entry: GrowthEntry,
+  weightUnit: "kg" | "lb",
+  lengthUnit: "cm" | "in"
+) {
   return [
-    formatMeasurement(entry.weightKg, "kg"),
-    formatMeasurement(entry.heightCm, "cm"),
-    formatMeasurement(entry.headCm, "cm"),
+    formatWeight(entry.weightKg, weightUnit),
+    formatLength(entry.heightCm, lengthUnit),
+    formatLength(entry.headCm, lengthUnit),
   ]
     .filter((value) => value !== "No entry")
     .join(" | ");
