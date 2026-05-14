@@ -20,6 +20,8 @@ import {
   type ActivityType,
   type TodayActivitySummary,
 } from "../src/services/activities";
+import { getReminders, type Reminder } from "../src/services/reminders";
+import { getVaccineScheduleReminders } from "../src/services/vaccineSchedule";
 
 const quickActions: {
   label: string;
@@ -38,6 +40,7 @@ const appSections: {
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
   { label: "Growth", route: "/growth", icon: "analytics-outline" },
+  { label: "Vaccines", route: "/vaccines", icon: "medical-outline" },
   { label: "Milestones", route: "/milestones", icon: "sparkles-outline" },
   { label: "Education", route: "/education", icon: "book-outline" },
   { label: "Reminders", route: "/reminders", icon: "notifications-outline" },
@@ -55,6 +58,7 @@ export default function Home() {
     tummyMinutes: 0,
   });
   const [recentActivities, setRecentActivities] = useState<ActivityLog[]>([]);
+  const [nextReminder, setNextReminder] = useState<Reminder | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -74,6 +78,7 @@ export default function Home() {
       if (!user) {
         setBaby(null);
         setRecentActivities([]);
+        setNextReminder(null);
         return;
       }
 
@@ -82,15 +87,26 @@ export default function Home() {
       setBaby(primaryBaby);
 
       if (primaryBaby) {
-        const [todaySummary, activities] = await Promise.all([
+        const [todaySummary, activities, reminders, scheduleReminders] =
+          await Promise.all([
           getTodayActivitySummary(primaryBaby.id),
           getRecentActivities(primaryBaby.id),
+          getReminders(primaryBaby.id),
+          getVaccineScheduleReminders(primaryBaby),
         ]);
+        const activeScheduleReminders = removeSavedScheduleReminders(
+          scheduleReminders,
+          reminders
+        );
 
         setSummary(todaySummary);
         setRecentActivities(activities);
+        setNextReminder(
+          getNextReminder([...reminders, ...activeScheduleReminders])
+        );
       } else {
         setRecentActivities([]);
+        setNextReminder(null);
       }
     } catch (e) {
       console.log(e);
@@ -183,14 +199,35 @@ export default function Home() {
             />
           </View>
 
-          <View style={styles.reminderCard}>
+          <Pressable
+            accessibilityRole="button"
+            style={({ pressed }) => [
+              styles.reminderCard,
+              pressed && styles.buttonPressed,
+            ]}
+            onPress={() => router.push("/reminders")}
+          >
             <View>
               <Text style={styles.profileLabel}>Next reminder</Text>
-              <Text style={styles.reminderTitle}>Tummy time nudge</Text>
-              <Text style={styles.reminderCopy}>A gentle 5 minute session later today</Text>
+              <Text style={styles.reminderTitle}>
+                {nextReminder?.title ?? "No reminders scheduled"}
+              </Text>
+              <Text style={styles.reminderCopy}>
+                {nextReminder
+                  ? formatReminderTiming(nextReminder)
+                  : "Turn on gentle nudges in Reminders."}
+              </Text>
             </View>
-            <Ionicons name="notifications-outline" size={24} color="#6F8B63" />
-          </View>
+            <Ionicons
+              name={
+                nextReminder?.type === "vaccine"
+                  ? "medical-outline"
+                  : "notifications-outline"
+              }
+              size={24}
+              color="#6F8B63"
+            />
+          </Pressable>
 
           <Text style={styles.sectionTitle}>Quick actions</Text>
           <View style={styles.actionGrid}>
@@ -388,6 +425,80 @@ function getMetadataString(activity: ActivityLog, key: string) {
   const value = activity.metadata?.[key];
 
   return typeof value === "string" ? value : "";
+}
+
+function getNextReminder(reminders: Reminder[]) {
+  const activeReminders = reminders.filter(
+    (reminder) => reminder.enabled && !reminder.completed
+  );
+
+  return (
+    activeReminders.sort(
+      (first, second) =>
+        getReminderSortTime(first) - getReminderSortTime(second)
+    )[0] ?? null
+  );
+}
+
+function removeSavedScheduleReminders(
+  scheduleReminders: Reminder[],
+  savedReminders: Reminder[]
+) {
+  const savedSourceIds = new Set(
+    savedReminders
+      .map((reminder) => reminder.sourceId)
+      .filter((sourceId): sourceId is string => Boolean(sourceId))
+  );
+
+  return scheduleReminders.filter(
+    (reminder) => !reminder.sourceId || !savedSourceIds.has(reminder.sourceId)
+  );
+}
+
+function getReminderSortTime(reminder: Reminder) {
+  if (!reminder.dueDate) {
+    return Number.MAX_SAFE_INTEGER;
+  }
+
+  const dueTime = new Date(reminder.dueDate).getTime();
+
+  return Number.isNaN(dueTime) ? Number.MAX_SAFE_INTEGER : dueTime;
+}
+
+function formatReminderTiming(reminder: Reminder) {
+  if (!reminder.dueDate) {
+    return reminder.timing;
+  }
+
+  const today = new Date();
+  const dueDate = new Date(reminder.dueDate);
+
+  if (Number.isNaN(dueDate.getTime())) {
+    return reminder.timing;
+  }
+
+  today.setHours(0, 0, 0, 0);
+  dueDate.setHours(0, 0, 0, 0);
+
+  const daysUntilDue = Math.round(
+    (dueDate.getTime() - today.getTime()) / 86400000
+  );
+
+  if (daysUntilDue < 0) {
+    return `Overdue by ${Math.abs(daysUntilDue)} day${
+      Math.abs(daysUntilDue) === 1 ? "" : "s"
+    }`;
+  }
+
+  if (daysUntilDue === 0) {
+    return "Due today";
+  }
+
+  if (daysUntilDue === 1) {
+    return "Due tomorrow";
+  }
+
+  return `Due in ${daysUntilDue} days`;
 }
 
 function StatusCard({
