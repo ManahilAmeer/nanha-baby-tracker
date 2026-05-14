@@ -29,6 +29,13 @@
       "expo-router",
       "expo-notifications",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Nanha Baby Tracker to choose a vaccination card photo.",
+          "cameraPermission": "Allow Nanha Baby Tracker to take a vaccination card photo."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",

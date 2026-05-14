@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -9,6 +10,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 
 import { getPrimaryBaby, type BabyProfile } from "../src/services/baby";
 import {
@@ -25,6 +27,7 @@ export default function VaccinesScreen() {
   const [dueDate, setDueDate] = useState("");
   const [completedDate, setCompletedDate] = useState("");
   const [isAlreadyCompleted, setIsAlreadyCompleted] = useState(false);
+  const [cardImageUri, setCardImageUri] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingId, setSavingId] = useState("");
@@ -88,15 +91,20 @@ export default function VaccinesScreen() {
         name: name.trim(),
         dueDate: dueDate.trim(),
         completedDate: isAlreadyCompleted ? completedDate.trim() : undefined,
-        source: "manual",
+        source: cardImageUri ? "card-upload" : "manual",
       });
 
       setName("");
       setDueDate("");
       setCompletedDate("");
       setIsAlreadyCompleted(false);
+      setCardImageUri("");
       setRecords(await getVaccineRecords(baby.id));
-      setMessage("Vaccine record saved.");
+      setMessage(
+        cardImageUri
+          ? "Card vaccine record saved. A reminder was created from the due date."
+          : "Vaccine record saved."
+      );
     } catch (error) {
       console.log(error);
       setMessage(
@@ -107,6 +115,58 @@ export default function VaccinesScreen() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleTakeCardPhoto = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (!permission.granted) {
+      setMessage("Camera permission is needed to take a card photo.");
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.85,
+    });
+
+    handleCardImageResult(result);
+  };
+
+  const handleChooseCardImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permission.granted) {
+      setMessage("Photo permission is needed to choose a card image.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.85,
+    });
+
+    handleCardImageResult(result);
+  };
+
+  const handleCardImageResult = (result: ImagePicker.ImagePickerResult) => {
+    if (result.canceled) {
+      return;
+    }
+
+    const imageUri = result.assets[0]?.uri;
+
+    if (!imageUri) {
+      setMessage("We could not read that card image.");
+      return;
+    }
+
+    setCardImageUri(imageUri);
+    setMessage("Card image added. Review the vaccine name and due date before saving.");
   };
 
   const handleMarkCompleted = async (record: VaccineRecord) => {
@@ -150,16 +210,71 @@ export default function VaccinesScreen() {
           <View style={styles.privacyCard}>
             <Ionicons name="shield-checkmark-outline" size={24} color="#6F8B63" />
             <View style={styles.privacyCopy}>
-              <Text style={styles.privacyTitle}>Card scan coming next</Text>
+              <Text style={styles.privacyTitle}>Review before saving</Text>
               <Text style={styles.privacyText}>
-                Vaccination cards can include sensitive health information. The
-                app will ask you to review extracted dates before saving.
+                Add a vaccination card photo, then confirm the vaccine name and
+                due date. The app creates reminders only after you save.
               </Text>
             </View>
           </View>
 
+          <View style={styles.scanCard}>
+            <View style={styles.scanHeader}>
+              <View style={styles.scanIcon}>
+                <Ionicons name="camera-outline" size={22} color="#9B6A43" />
+              </View>
+              <View style={styles.scanCopy}>
+                <Text style={styles.scanTitle}>Vaccination card image</Text>
+                <Text style={styles.scanText}>
+                  Take a clear photo or choose one from your gallery.
+                </Text>
+              </View>
+            </View>
+
+            {cardImageUri ? (
+              <Image source={{ uri: cardImageUri }} style={styles.cardPreview} />
+            ) : (
+              <View style={styles.emptyPreview}>
+                <Ionicons name="image-outline" size={28} color="#9B6A43" />
+                <Text style={styles.emptyPreviewText}>No card image selected</Text>
+              </View>
+            )}
+
+            <View style={styles.scanActions}>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.scanButton}
+                onPress={handleTakeCardPhoto}
+              >
+                <Ionicons name="camera-outline" size={20} color="#9B6A43" />
+                <Text style={styles.scanButtonText}>Take photo</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                style={styles.scanButton}
+                onPress={handleChooseCardImage}
+              >
+                <Ionicons name="images-outline" size={20} color="#9B6A43" />
+                <Text style={styles.scanButtonText}>Choose image</Text>
+              </Pressable>
+            </View>
+
+            {cardImageUri ? (
+              <Pressable
+                accessibilityRole="button"
+                style={styles.clearImageButton}
+                onPress={() => setCardImageUri("")}
+              >
+                <Ionicons name="close-circle-outline" size={19} color="#8B7258" />
+                <Text style={styles.clearImageText}>Remove image</Text>
+              </Pressable>
+            ) : null}
+          </View>
+
           <View style={styles.formCard}>
-            <Text style={styles.formTitle}>Add vaccine record</Text>
+            <Text style={styles.formTitle}>
+              {cardImageUri ? "Review card details" : "Add vaccine record"}
+            </Text>
 
             <VaccineInput
               label="Vaccine name"
@@ -217,7 +332,9 @@ export default function VaccinesScreen() {
               ) : (
                 <>
                   <Ionicons name="add" size={22} color="#FFF9F0" />
-                  <Text style={styles.buttonText}>Save vaccine</Text>
+                  <Text style={styles.buttonText}>
+                    {cardImageUri ? "Save from card" : "Save vaccine"}
+                  </Text>
                 </>
               )}
             </Pressable>
@@ -365,6 +482,83 @@ const styles = StyleSheet.create({
   privacyCopy: { flex: 1 },
   privacyTitle: { color: "#3A332A", fontSize: 16, fontWeight: "800" },
   privacyText: { color: "#6F6253", lineHeight: 20, marginTop: 5 },
+  scanCard: {
+    backgroundColor: "#FFF9F0",
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#DCCBB5",
+    padding: 16,
+    marginBottom: 16,
+    gap: 14,
+  },
+  scanHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  scanIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: "#EADBC8",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scanCopy: { flex: 1 },
+  scanTitle: { color: "#3A332A", fontSize: 17, fontWeight: "800" },
+  scanText: { color: "#6F6253", lineHeight: 20, marginTop: 3 },
+  cardPreview: {
+    width: "100%",
+    height: 190,
+    borderRadius: 8,
+    backgroundColor: "#EADBC8",
+  },
+  emptyPreview: {
+    minHeight: 150,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderColor: "#D9C5A8",
+    backgroundColor: "#FBF4EA",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  emptyPreviewText: {
+    color: "#8B7258",
+    fontWeight: "800",
+  },
+  scanActions: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  scanButton: {
+    flex: 1,
+    minHeight: 46,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D9C5A8",
+    backgroundColor: "#FBF4EA",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  scanButtonText: {
+    color: "#9B6A43",
+    fontWeight: "800",
+  },
+  clearImageButton: {
+    minHeight: 38,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  clearImageText: {
+    color: "#8B7258",
+    fontWeight: "800",
+  },
   formCard: {
     backgroundColor: "#FFF9F0",
     borderRadius: 8,
