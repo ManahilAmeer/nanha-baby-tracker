@@ -89,13 +89,9 @@ export default function Home() {
       if (primaryBaby) {
         const [todaySummary, activities, reminders, scheduleReminders] =
           await Promise.all([
-            console.log("Loading summary");
-
             getTodayActivitySummary(primaryBaby.id),
-            console.log("Loading activty");
 
             getRecentActivities(primaryBaby.id),
-            console.log("Loading reminders");
 
             getReminders(primaryBaby.id),
             getVaccineScheduleReminders(primaryBaby),

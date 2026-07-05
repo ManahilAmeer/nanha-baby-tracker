@@ -190,23 +190,29 @@ export default function Settings() {
       activity.notes ?? "",
     ]));
 
-    // console.log("Generated CSV:\n", csv);
-    if (!FileSystem.documentDirectory) {
-      setError("File storage is not available on this device.");
+    try {
+    const baseDirectory =
+      FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+
+    if (!baseDirectory) {
+      setError("File storage is not available in this environment.");
       return;
     }
-    const fileUri = `${FileSystem.documentDirectory}nanha-baby-export.csv`;
+    const fileUri = `${baseDirectory}nanha-baby-export.csv`;
 
     await FileSystem.writeAsStringAsync(fileUri, csv, {
       encoding: FileSystem.EncodingType.UTF8,
-    });
+    });25
 
     await Sharing.shareAsync(fileUri, {
       mimeType: "text/csv",
       dialogTitle: "Export baby data",
     });
     // setError("Data export is not implemented in this demo.");
-  };
+  }catch (error) {
+    console.log(error);
+    setError("We could not export your data.");
+  }};
 
 
 
