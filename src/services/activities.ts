@@ -64,6 +64,46 @@ export const addActivity = async (activity: ActivityInput) => {
   });
 };
 
+export const getAllActivities = async (babyId: string): Promise<ActivityLog[]> => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    return [];
+  }
+
+  const activityQuery = query(
+    collection(db, "activities"),
+    where("userId", "==", userId),
+    where("babyId", "==", babyId),
+    orderBy("createdAt", "desc")
+  );
+
+  const snapshot = await getDocs(activityQuery);  
+
+  return snapshot.docs.map((doc) => {
+    const data = doc.data() as {
+      babyId: string;
+      type: ActivityType;
+      detail?: string;
+      notes?: string;
+      createdAt?: Timestamp;
+      startedAt?: Timestamp;
+      endedAt?: Timestamp;
+      metadata?: Record<string, string | number | boolean>;
+    };
+    return {
+      id: doc.id,
+      babyId: data.babyId,
+      type: data.type,
+      detail: data.detail,
+      notes: data.notes,
+      createdAt: data.createdAt?.toDate(),
+      startedAt: data.startedAt?.toDate(),
+      endedAt: data.endedAt?.toDate(),
+      metadata: data.metadata,
+    };
+  });
+};
 export const getRecentActivities = async (
   babyId: string,
   limitCount = 8

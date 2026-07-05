@@ -22,10 +22,14 @@ import {
   type Sex,
   type WeightUnit,
 } from "../src/services/baby";
+import { getAllActivities } from "@/src/services/activities";
+import { rowsToCsv } from "@/src/utils/csv";
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
 
 const settings = [
   "Reminder settings",
-  "Data export placeholder",
+  // "Data export placeholder",
   "Privacy and data controls",
 ];
 
@@ -169,6 +173,42 @@ export default function Settings() {
       setSigningOut(false);
     }
   };
+
+  const handleExportData = async () => {
+    if (!baby) {
+      setError("No baby profile found. Create one to export data.");
+      return;
+    }
+
+    const activities = getAllActivities(baby?.id ?? "")
+    console.log("Activities: ", activities);
+
+    const csv = rowsToCsv(["Date", "Type", "Detail", "Notes"], (await activities).map((activity) => [
+      activity.createdAt?.toISOString() ?? "",
+      activity.type,
+      activity.detail ?? "",
+      activity.notes ?? "",
+    ]));
+
+    // console.log("Generated CSV:\n", csv);
+    if (!FileSystem.documentDirectory) {
+      setError("File storage is not available on this device.");
+      return;
+    }
+    const fileUri = `${FileSystem.documentDirectory}nanha-baby-export.csv`;
+
+    await FileSystem.writeAsStringAsync(fileUri, csv, {
+      encoding: FileSystem.EncodingType.UTF8,
+    });
+
+    await Sharing.shareAsync(fileUri, {
+      mimeType: "text/csv",
+      dialogTitle: "Export baby data",
+    });
+    // setError("Data export is not implemented in this demo.");
+  };
+
+
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.container}>
@@ -320,6 +360,17 @@ export default function Settings() {
         )}
       </View>
 
+      <Pressable
+        accessibilityRole="button"
+        style={({ pressed }) => [
+          styles.card,
+          pressed && styles.buttonPressed,
+        ]}
+        onPress={() => handleExportData()}
+      >
+        <Ionicons name="notifications-outline" size={21} color="#9B6A43" />
+        <Text style={styles.cardText}>Export Data</Text>
+      </Pressable>
       {settings.map((setting) => (
         <View style={styles.card} key={setting}>
           <Ionicons name="settings-outline" size={21} color="#9B6A43" />

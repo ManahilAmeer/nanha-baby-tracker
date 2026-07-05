@@ -28,24 +28,24 @@ const quickActions: {
   icon: keyof typeof Ionicons.glyphMap;
   type: ActivityType;
 }[] = [
-  { label: "Log Feed", icon: "water-outline", type: "feed" },
-  { label: "Log Diaper", icon: "invert-mode-outline", type: "diaper" },
-  { label: "Start Sleep", icon: "moon-outline", type: "sleep" },
-  { label: "Log Tummy Time", icon: "timer-outline", type: "tummy" },
-];
+    { label: "Log Feed", icon: "water-outline", type: "feed" },
+    { label: "Log Diaper", icon: "invert-mode-outline", type: "diaper" },
+    { label: "Start Sleep", icon: "moon-outline", type: "sleep" },
+    { label: "Log Tummy Time", icon: "timer-outline", type: "tummy" },
+  ];
 
 const appSections: {
   label: string;
   route: Href;
   icon: keyof typeof Ionicons.glyphMap;
 }[] = [
-  { label: "Growth", route: "/growth", icon: "analytics-outline" },
-  { label: "Vaccines", route: "/vaccines", icon: "medical-outline" },
-  { label: "Milestones", route: "/milestones", icon: "sparkles-outline" },
-  { label: "Education", route: "/education", icon: "book-outline" },
-  { label: "Reminders", route: "/reminders", icon: "notifications-outline" },
-  { label: "Settings", route: "/settings", icon: "settings-outline" },
-];
+    { label: "Growth", route: "/growth", icon: "analytics-outline" },
+    { label: "Vaccines", route: "/vaccines", icon: "medical-outline" },
+    { label: "Milestones", route: "/milestones", icon: "sparkles-outline" },
+    { label: "Education", route: "/education", icon: "book-outline" },
+    { label: "Reminders", route: "/reminders", icon: "notifications-outline" },
+    { label: "Settings", route: "/settings", icon: "settings-outline" },
+  ];
 
 export default function Home() {
   const router = useRouter();
@@ -82,18 +82,24 @@ export default function Home() {
         return;
       }
 
+      console.log("Loading baby");
       const primaryBaby = await getPrimaryBaby(user.uid);
-
       setBaby(primaryBaby);
 
       if (primaryBaby) {
         const [todaySummary, activities, reminders, scheduleReminders] =
           await Promise.all([
-          getTodayActivitySummary(primaryBaby.id),
-          getRecentActivities(primaryBaby.id),
-          getReminders(primaryBaby.id),
-          getVaccineScheduleReminders(primaryBaby),
-        ]);
+            console.log("Loading summary");
+
+            getTodayActivitySummary(primaryBaby.id),
+            console.log("Loading activty");
+
+            getRecentActivities(primaryBaby.id),
+            console.log("Loading reminders");
+
+            getReminders(primaryBaby.id),
+            getVaccineScheduleReminders(primaryBaby),
+          ]);
         const activeScheduleReminders = removeSavedScheduleReminders(
           scheduleReminders,
           reminders
@@ -485,9 +491,8 @@ function formatReminderTiming(reminder: Reminder) {
   );
 
   if (daysUntilDue < 0) {
-    return `Overdue by ${Math.abs(daysUntilDue)} day${
-      Math.abs(daysUntilDue) === 1 ? "" : "s"
-    }`;
+    return `Overdue by ${Math.abs(daysUntilDue)} day${Math.abs(daysUntilDue) === 1 ? "" : "s"
+      }`;
   }
 
   if (daysUntilDue === 0) {
