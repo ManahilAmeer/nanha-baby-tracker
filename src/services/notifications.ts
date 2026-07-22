@@ -34,6 +34,10 @@ export async function syncReminderNotifications(
     };
   }
 
+  // Android 13 does not display the notification-permission prompt until an
+  // Android notification channel exists.
+  await configureAndroidNotificationChannel();
+
   const hasPermission = await ensureNotificationPermission();
 
   if (!hasPermission) {
@@ -46,7 +50,6 @@ export async function syncReminderNotifications(
     };
   }
 
-  await configureAndroidNotificationChannel();
   await cancelExistingReminderNotifications();
 
   const schedulableReminders = reminders
@@ -155,7 +158,7 @@ function getReminderTriggerDate(reminder: Reminder) {
   }
 
   if (dueDate.getTime() <= Date.now()) {
-    return new Date(Date.now() + 60000);
+    return null;
   }
 
   return dueDate;

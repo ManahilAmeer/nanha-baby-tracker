@@ -356,6 +356,7 @@ const styles = StyleSheet.create({
     minHeight: 54,
     backgroundColor: "#9B6A43",
     borderRadius: 8,
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -376,6 +377,8 @@ const styles = StyleSheet.create({
     color: "#FFF9F0",
     fontSize: 16,
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   secondaryButton: {
     minHeight: 48,

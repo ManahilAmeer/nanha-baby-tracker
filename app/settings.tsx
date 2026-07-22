@@ -202,7 +202,7 @@ export default function Settings() {
 
     await FileSystem.writeAsStringAsync(fileUri, csv, {
       encoding: FileSystem.EncodingType.UTF8,
-    });25
+    });
 
     await Sharing.shareAsync(fileUri, {
       mimeType: "text/csv",
@@ -650,6 +650,7 @@ const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 8,
     backgroundColor: "#9B6A43",
+    paddingHorizontal: 16,
     alignItems: "center",
     justifyContent: "center",
     flexDirection: "row",
@@ -659,6 +660,8 @@ const styles = StyleSheet.create({
     color: "#FFF9F0",
     fontSize: 16,
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   card: {
     minHeight: 58,

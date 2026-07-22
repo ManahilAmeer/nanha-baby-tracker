@@ -118,7 +118,7 @@ export default function Reminders() {
       <Text style={styles.title}>Gentle care nudges</Text>
       <Text style={styles.subtitle}>
         Turn reminders on or off and mark care tasks completed. Device
-        notifications can use this setup next.
+        notifications are scheduled for enabled, dated reminders.
       </Text>
 
       {loading ? (
