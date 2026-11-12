@@ -120,54 +120,26 @@ export default function Home() {
     }
   };
 
-  return (
-    <ScrollView
-      style={styles.screen}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}
-    >
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.kicker}>Home dashboard</Text>
-          <Text style={styles.greeting}>Assalam o Alaikum</Text>
-        </View>
-        <View style={styles.headerIcon}>
-          <Ionicons name="leaf-outline" size={24} color="#9B6A43" />
-        </View>
-      </View>
+    return (
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.header}>
+           <View>
+             <Text style={styles.kicker}>Home dashboard</Text>
+             <Text style={styles.greeting}>Assalam o Alaikum</Text>
+           </View>
+           {/* <View style={styles.headerIcon}>
+             <Ionicons name="leaf-outline" size={24} color="#9B6A43" />
+           </View> */}
+         </View>
 
-      {loading ? (
-        <View style={styles.stateCard}>
-          <ActivityIndicator color="#9B6A43" />
-          <Text style={styles.stateText}>Loading your dashboard...</Text>
-        </View>
-      ) : error ? (
-        <View style={styles.stateCard}>
-          <Ionicons name="alert-circle-outline" size={30} color="#A84D3F" />
-          <Text style={styles.stateText}>{error}</Text>
-          <Pressable
-            style={styles.secondaryButton}
-            onPress={() => fetchDashboard()}
-          >
-            <Ionicons name="refresh" size={18} color="#9B6A43" />
-            <Text style={styles.secondaryButtonText}>Try again</Text>
-          </Pressable>
-        </View>
-      ) : baby ? (
-        <>
-          <View style={styles.profileCard}>
-            <View style={styles.profileIcon}>
-              <MaterialCommunityIcons
-                name="baby-face-outline"
-                size={32}
-                color="#9B6A43"
-              />
-            </View>
-            <View style={styles.profileCopy}>
-              <Text style={styles.profileLabel}>Baby age</Text>
-              <Text style={styles.babyName}>{baby.name}</Text>
-              <Text style={styles.babyDob}>{formatBabyAge(baby.dob)}</Text>
-            </View>
+         {loading ? (
+          <View style={styles.stateCard}>
+            <ActivityIndicator color="#9B6A43" />
+            <Text style={styles.stateText}>Loading your dashboard...</Text>
           </View>
 
           <View style={styles.statusGrid}>
