@@ -602,6 +602,8 @@ const styles = StyleSheet.create({
   chipText: {
     color: "#6F6253",
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   selectedChipText: {
     color: "#FFF9F0",
@@ -693,11 +695,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 22,
+    paddingHorizontal: 16,
   },
   logoutText: {
     color: "#A84D3F",
     fontSize: 16,
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   buttonPressed: {
     transform: [{ translateY: 1 }],
