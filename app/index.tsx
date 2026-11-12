@@ -131,9 +131,9 @@ export default function Home() {
              <Text style={styles.kicker}>Home dashboard</Text>
              <Text style={styles.greeting}>Assalam o Alaikum</Text>
            </View>
-           <View style={styles.headerIcon}>
+           {/* <View style={styles.headerIcon}>
              <Ionicons name="leaf-outline" size={24} color="#9B6A43" />
-           </View>
+           </View> */}
          </View>
 
          {loading ? (
