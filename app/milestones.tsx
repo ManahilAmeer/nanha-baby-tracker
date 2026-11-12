@@ -272,7 +272,12 @@ const styles = StyleSheet.create({
     backgroundColor: "#6F8B63",
     borderColor: "#6F8B63",
   },
-  monthButtonText: { color: "#6F6253", fontWeight: "800" },
+  monthButtonText: {
+    color: "#6F6253",
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   selectedMonthButtonText: { color: "#FFF9F0" },
   card: {
     minHeight: 104,

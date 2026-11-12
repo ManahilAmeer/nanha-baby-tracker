@@ -295,6 +295,8 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: "#8B7258",
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   completedButtonText: {
     color: "#FFF9F0",

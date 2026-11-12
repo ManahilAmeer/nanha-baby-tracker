@@ -322,6 +322,8 @@ const styles = StyleSheet.create({
   chipText: {
     color: "#6F6253",
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   selectedChipText: {
     color: "#FFF9F0",
@@ -387,10 +389,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: 1,
     borderColor: "#D9C5A8",
+    paddingHorizontal: 12,
   },
   secondaryButtonText: {
     color: "#8B7258",
     fontSize: 15,
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
 });

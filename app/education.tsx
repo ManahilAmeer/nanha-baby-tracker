@@ -232,6 +232,8 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     textAlign: "center",
     fontSize: 12,
+    flexShrink: 1,
+    flexWrap: "wrap",
   },
   selectedAgeButtonText: { color: "#FFF9F0" },
   card: {

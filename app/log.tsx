@@ -1,3 +1,5 @@
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -8,8 +10,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
 
 import { addActivity, type ActivityType } from "../src/services/activities";
 import { getPrimaryBaby, type BabyProfile } from "../src/services/baby";
@@ -20,31 +20,31 @@ const activityTypes: {
   title: string;
   subtitle: string;
 }[] = [
-  {
-    icon: "water-outline",
-    type: "feed",
-    title: "Feed",
-    subtitle: "Milk, formula, or solids",
-  },
-  {
-    icon: "invert-mode-outline",
-    type: "diaper",
-    title: "Diaper",
-    subtitle: "Wet, dirty, or both",
-  },
-  {
-    icon: "moon-outline",
-    type: "sleep",
-    title: "Sleep",
-    subtitle: "Nap and bedtime sessions",
-  },
-  {
-    icon: "timer-outline",
-    type: "tummy",
-    title: "Tummy Time",
-    subtitle: "Timer or manual entry",
-  },
-];
+    {
+      icon: "water-outline",
+      type: "feed",
+      title: "Feed",
+      subtitle: "Milk, formula, or solids",
+    },
+    {
+      icon: "invert-mode-outline",
+      type: "diaper",
+      title: "Diaper",
+      subtitle: "Wet, dirty, or both",
+    },
+    {
+      icon: "moon-outline",
+      type: "sleep",
+      title: "Sleep",
+      subtitle: "Nap and bedtime sessions",
+    },
+    {
+      icon: "timer-outline",
+      type: "tummy",
+      title: "Tummy Time",
+      subtitle: "Timer or manual entry",
+    },
+  ];
 
 const diaperOptions = ["Wet", "Dirty", "Both"];
 const feedTypes = ["Breast", "Formula", "Solid"];
@@ -419,7 +419,7 @@ export default function LogScreen() {
             {type === "sleep" ? (
               <>
                 <View style={styles.timerCard}>
-                  <View>
+                  <View style={styles.timerCopy}>
                     <Text style={styles.timerLabel}>Sleep timer</Text>
                     <Text style={styles.timerValue}>
                       {sleepStartedAt
@@ -495,7 +495,7 @@ export default function LogScreen() {
             {type === "tummy" ? (
               <>
                 <View style={styles.timerCard}>
-                  <View>
+                  <View style={styles.timerCopy}>
                     <Text style={styles.timerLabel}>Tummy time timer</Text>
                     <Text style={styles.timerValue}>
                       {tummyStartedAt
@@ -780,11 +780,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: "#D9C5A8",
-    padding: 16,
+    padding: 12,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    gap: 12,
+    gap: 8,
+  },
+  timerCopy: {
+    flex: 1,
+    minWidth: 0,
   },
   timerLabel: {
     color: "#8B7258",
@@ -795,17 +799,20 @@ const styles = StyleSheet.create({
   },
   timerValue: {
     color: "#3A332A",
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: "800",
+    flexWrap: "wrap",
   },
   timerButton: {
     minHeight: 44,
-    minWidth: 100,
+    width: 96,
     borderRadius: 8,
     backgroundColor: "#6F8B63",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
+    paddingVertical: 8,
+    flexShrink: 0,
   },
   stopTimerButton: {
     backgroundColor: "#9B6A43",
@@ -813,6 +820,9 @@ const styles = StyleSheet.create({
   timerButtonText: {
     color: "#FFF9F0",
     fontWeight: "800",
+    fontSize: 12,
+    textAlign: "center",
+    flexShrink: 1,
   },
   messageText: {
     color: "#A84D3F",
@@ -827,6 +837,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
+    paddingHorizontal: 16,
     shadowColor: "#6D4829",
     shadowOpacity: 0.18,
     shadowRadius: 14,
@@ -843,6 +854,8 @@ const styles = StyleSheet.create({
     color: "#FFF9F0",
     fontWeight: "800",
     fontSize: 16,
+    flexShrink: 1,
+    textAlign: "center",
   },
   stateCard: {
     backgroundColor: "#FFF9F0",
