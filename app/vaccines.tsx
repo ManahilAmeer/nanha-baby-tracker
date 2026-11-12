@@ -543,10 +543,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
+    paddingHorizontal: 8,
   },
   scanButtonText: {
     color: "#9B6A43",
     fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
   },
   clearImageButton: {
     minHeight: 38,
@@ -558,6 +561,7 @@ const styles = StyleSheet.create({
   clearImageText: {
     color: "#8B7258",
     fontWeight: "800",
+    flexShrink: 1,
   },
   formCard: {
     backgroundColor: "#FFF9F0",
@@ -605,10 +609,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
+    paddingHorizontal: 16,
   },
   buttonPressed: { transform: [{ translateY: 1 }] },
   buttonDisabled: { opacity: 0.72 },
-  buttonText: { color: "#FFF9F0", fontSize: 16, fontWeight: "800" },
+  buttonText: {
+    color: "#FFF9F0",
+    fontSize: 16,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   sectionTitle: {
     color: "#3A332A",
     fontSize: 18,
@@ -647,7 +658,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 12,
   },
-  markButtonText: { color: "#FFF9F0", fontWeight: "800" },
+  markButtonText: {
+    color: "#FFF9F0",
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   stateCard: {
     backgroundColor: "#FFF9F0",
     borderRadius: 8,

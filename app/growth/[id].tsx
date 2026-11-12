@@ -359,8 +359,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 18,
+    paddingHorizontal: 16,
   },
-  saveText: { color: "#FFF9F0", fontSize: 16, fontWeight: "800" },
+  saveText: {
+    color: "#FFF9F0",
+    fontSize: 16,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   deleteButton: {
     minHeight: 54,
     borderRadius: 8,
@@ -372,8 +379,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
     marginTop: 12,
+    paddingHorizontal: 16,
   },
-  deleteText: { color: "#A84D3F", fontSize: 16, fontWeight: "800" },
+  deleteText: {
+    color: "#A84D3F",
+    fontSize: 16,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   buttonPressed: { transform: [{ translateY: 1 }] },
   buttonDisabled: { opacity: 0.72 },
   stateCard: {

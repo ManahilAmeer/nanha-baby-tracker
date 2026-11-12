@@ -378,10 +378,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     flexDirection: "row",
     gap: 8,
+    paddingHorizontal: 16,
   },
   buttonPressed: { transform: [{ translateY: 1 }] },
   buttonDisabled: { opacity: 0.72 },
-  buttonText: { color: "#FFF9F0", fontSize: 16, fontWeight: "800" },
+  buttonText: {
+    color: "#FFF9F0",
+    fontSize: 16,
+    fontWeight: "800",
+    flexShrink: 1,
+    textAlign: "center",
+  },
   sectionTitle: {
     color: "#3A332A",
     fontSize: 18,
