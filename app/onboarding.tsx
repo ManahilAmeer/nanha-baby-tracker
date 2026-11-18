@@ -146,7 +146,7 @@ export default function Onboarding() {
             style={styles.reminderRow}
             onPress={() => setRemindersEnabled((value) => !value)}
           >
-            <View>
+            <View style={styles.reminderCopyContainer}>
               <Text style={styles.reminderTitle}>Gentle reminders</Text>
               <Text style={styles.reminderCopy}>
                 Vaccine, feeding, tummy time, growth, and milestones
@@ -345,9 +345,14 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     marginBottom: 4,
   },
+  reminderCopyContainer: {
+    flex: 1,
+    minWidth: 0,
+  },
   reminderCopy: {
     color: "#6F6253",
     lineHeight: 20,
+    flexShrink: 1,
   },
   errorText: {
     color: "#A84D3F",
