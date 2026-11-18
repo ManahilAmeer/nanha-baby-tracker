@@ -1,3 +1,5 @@
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -5,14 +7,12 @@ import {
   Platform,
   Pressable,
   ScrollView,
-  View,
+  StyleSheet,
   Text,
   TextInput,
-  StyleSheet,
+  View,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { signIn, signUp } from "../src/services/auth";
-import { useRouter } from "expo-router";
 
 type AuthMode = "login" | "signup";
 
@@ -22,12 +22,19 @@ export default function AuthScreen() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const passwordStrength = getPasswordStrength(password);
 
   const handleSubmit = async () => {
     if (!email.trim() || !password) {
       setError("Please enter your email and password.");
+      return;
+    }
+
+    if (mode === "signup" && passwordStrength.level === "weak") {
+      setError("Choose a medium or strong password to create your account.");
       return;
     }
 
@@ -133,15 +140,70 @@ export default function AuthScreen() {
 
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              autoCapitalize="none"
-              placeholder="Minimum 6 characters"
-              placeholderTextColor="#A49B8F"
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              style={styles.input}
-            />
+            <View style={styles.passwordInputContainer}>
+              <TextInput
+                autoCapitalize="none"
+                placeholder="Enter your password"
+                placeholderTextColor="#A49B8F"
+                secureTextEntry={!passwordVisible}
+                value={password}
+                onChangeText={setPassword}
+                style={[styles.input, styles.passwordInput]}
+              />
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={passwordVisible ? "Hide password" : "Show password"}
+                accessibilityState={{ selected: passwordVisible }}
+                hitSlop={8}
+                style={styles.passwordVisibilityButton}
+                onPress={() => setPasswordVisible((visible) => !visible)}
+              >
+                <Ionicons
+                  name={passwordVisible ? "eye-off-outline" : "eye-outline"}
+                  size={22}
+                  color="#6F6253"
+                />
+              </Pressable>
+            </View>
+            {mode === "signup" ? (
+              <View accessibilityLiveRegion="polite" style={styles.strengthSection}>
+                <View style={styles.strengthHeader}>
+                  <Text style={styles.strengthLabel}>Password strength</Text>
+                  <Text
+                    style={[
+                      styles.strengthValue,
+                      passwordStrength.level === "weak" && password.length > 0
+                        ? styles.weakStrength
+                        : null,
+                      passwordStrength.level === "medium" && styles.mediumStrength,
+                      passwordStrength.level === "strong" && styles.strongStrength,
+                    ]}
+                  >
+                    {password.length === 0 ? "Not entered" : passwordStrength.label}
+                  </Text>
+                </View>
+                <View style={styles.strengthBars}>
+                  {[1, 2, 3].map((segment) => (
+                    <View
+                      key={segment}
+                      style={[
+                        styles.strengthBar,
+                        segment <= passwordStrength.segments &&
+                        passwordStrength.level === "weak" && styles.weakBar,
+                        segment <= passwordStrength.segments &&
+                        passwordStrength.level === "medium" && styles.mediumBar,
+                        segment <= passwordStrength.segments &&
+                        passwordStrength.level === "strong" && styles.strongBar,
+                      ]}
+                    />
+                  ))}
+                </View>
+                <Text style={styles.strengthHint}>
+                  Medium requires 8+ characters and at least 3 of: uppercase,
+                  lowercase, number, or symbol.
+                </Text>
+              </View>
+            ) : null}
           </View>
 
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
@@ -175,6 +237,25 @@ export default function AuthScreen() {
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+function getPasswordStrength(password: string) {
+  const characterTypes = [
+    /[a-z]/.test(password),
+    /[A-Z]/.test(password),
+    /\d/.test(password),
+    /[^A-Za-z0-9]/.test(password),
+  ].filter(Boolean).length;
+  const meetsMedium = password.length >= 8 && characterTypes >= 3;
+  const isStrong = password.length >= 12 && characterTypes === 4;
+
+  if (isStrong) return { level: "strong" as const, label: "Strong", segments: 3 };
+  if (meetsMedium) return { level: "medium" as const, label: "Medium", segments: 2 };
+  return {
+    level: "weak" as const,
+    label: "Weak",
+    segments: password.length > 0 ? 1 : 0,
+  };
 }
 
 function getAuthErrorMessage(error: unknown) {
@@ -283,6 +364,73 @@ const styles = StyleSheet.create({
     borderColor: "#DCCBB5",
     color: "#3A332A",
     fontSize: 16,
+  },
+  passwordInputContainer: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  passwordInput: {
+    paddingRight: 56,
+  },
+  passwordVisibilityButton: {
+    position: "absolute",
+    right: 4,
+    width: 48,
+    height: 48,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  strengthSection: {
+    gap: 8,
+  },
+  strengthHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+  },
+  strengthLabel: {
+    color: "#514739",
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  strengthValue: {
+    color: "#6F6253",
+    fontSize: 13,
+    fontWeight: "800",
+  },
+  strengthBars: {
+    flexDirection: "row",
+    gap: 6,
+  },
+  strengthBar: {
+    flex: 1,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: "#EADBC8",
+  },
+  weakStrength: {
+    color: "#A84D3F",
+  },
+  mediumStrength: {
+    color: "#9B6A43",
+  },
+  strongStrength: {
+    color: "#54734D",
+  },
+  weakBar: {
+    backgroundColor: "#A84D3F",
+  },
+  mediumBar: {
+    backgroundColor: "#9B6A43",
+  },
+  strongBar: {
+    backgroundColor: "#54734D",
+  },
+  strengthHint: {
+    color: "#6F6253",
+    fontSize: 12,
+    lineHeight: 17,
   },
   errorText: {
     color: "#A84D3F",
