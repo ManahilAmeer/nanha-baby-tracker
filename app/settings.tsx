@@ -36,7 +36,7 @@ const settings = [
 const sexOptions: { label: string; value: Sex }[] = [
   { label: "Girl", value: "girl" },
   { label: "Boy", value: "boy" },
-  { label: "Skip", value: "not-specified" },
+  { label: "Not specified", value: "not-specified" },
 ];
 
 const feedingOptions: { label: string; value: FeedingType }[] = [
