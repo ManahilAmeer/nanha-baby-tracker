@@ -383,7 +383,7 @@ export default function LogScreen() {
                 </View>
                 <Text style={styles.label}>Amount / side</Text>
                 <TextInput
-                  placeholder="e.g. 90 ml, left side, right side"
+                  placeholder={ detail === "Solid" ? "e.g. A few bites, a few sips or an egg" : "e.g. 90 ml, left side, right side" }
                   placeholderTextColor="#A8957D"
                   value={secondaryDetail}
                   onChangeText={setSecondaryDetail}
