@@ -124,6 +124,8 @@ export default function LogScreen() {
   };
 
   const handleSelectType = (nextType: ActivityType) => {
+    if ((sleepStartedAt || tummyStartedAt) && nextType !== type) return;
+
     setType(nextType);
     setDetail(getDefaultDetail(nextType));
     setSecondaryDetail("");
@@ -303,14 +305,20 @@ export default function LogScreen() {
           <View style={styles.list}>
             {activityTypes.map((activity) => {
               const isSelected = activity.type === type;
+              const isLocked =
+                (sleepStartedAt !== null || tummyStartedAt !== null) &&
+                !isSelected;
 
               return (
                 <Pressable
                   accessibilityRole="button"
+                  accessibilityState={{ disabled: isLocked }}
+                  disabled={isLocked}
                   key={activity.type}
                   style={({ pressed }) => [
                     styles.card,
                     isSelected && styles.selectedCard,
+                    isLocked && styles.lockedCard,
                     pressed && styles.cardPressed,
                   ]}
                   onPress={() => handleSelectType(activity.type)}
@@ -486,7 +494,11 @@ export default function LogScreen() {
                     placeholderTextColor="#A8957D"
                     value={secondaryDetail}
                     onChangeText={setSecondaryDetail}
-                    style={styles.input}
+                    editable={!sleepStartedAt}
+                    style={[
+                      styles.input,
+                      sleepStartedAt && styles.disabledInput,
+                    ]}
                   />
                 </View>
               </>
@@ -533,7 +545,11 @@ export default function LogScreen() {
                     placeholderTextColor="#A8957D"
                     value={secondaryDetail}
                     onChangeText={setSecondaryDetail}
-                    style={styles.input}
+                    editable={!tummyStartedAt}
+                    style={[
+                      styles.input,
+                      tummyStartedAt && styles.disabledInput,
+                    ]}
                   />
                 </View>
               </>
@@ -553,25 +569,27 @@ export default function LogScreen() {
 
             {message ? <Text style={styles.messageText}>{message}</Text> : null}
 
-            <Pressable
-              accessibilityRole="button"
-              disabled={saving}
-              style={({ pressed }) => [
-                styles.button,
-                pressed && !saving && styles.buttonPressed,
-                saving && styles.buttonDisabled,
-              ]}
-              onPress={handleSave}
-            >
-              {saving ? (
-                <ActivityIndicator color="#FFF9F0" />
-              ) : (
-                <>
-                  <Ionicons name="checkmark" size={22} color="#FFF9F0" />
-                  <Text style={styles.buttonText}>Save log</Text>
-                </>
-              )}
-            </Pressable>
+            {!sleepStartedAt && !tummyStartedAt ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={saving}
+                style={({ pressed }) => [
+                  styles.button,
+                  pressed && !saving && styles.buttonPressed,
+                  saving && styles.buttonDisabled,
+                ]}
+                onPress={handleSave}
+              >
+                {saving ? (
+                  <ActivityIndicator color="#FFF9F0" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={22} color="#FFF9F0" />
+                    <Text style={styles.buttonText}>Save log</Text>
+                  </>
+                )}
+              </Pressable>
+            ) : null}
           </View>
         </>
       )}
@@ -680,6 +698,9 @@ const styles = StyleSheet.create({
     borderColor: "#9DB18F",
     backgroundColor: "#F5F0E2",
   },
+  lockedCard: {
+    opacity: 0.5,
+  },
   cardPressed: {
     transform: [{ translateY: 1 }],
     borderColor: "#D9C5A8",
@@ -743,6 +764,9 @@ const styles = StyleSheet.create({
     borderColor: "#DCCBB5",
     color: "#3A332A",
     fontSize: 16,
+  },
+  disabledInput: {
+    opacity: 0.5,
   },
   notesInput: {
     minHeight: 90,
