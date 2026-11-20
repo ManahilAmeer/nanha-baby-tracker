@@ -35,8 +35,13 @@ export const addGrowthEntry = async (entry: GrowthEntryInput) => {
     throw new Error("You need to be signed in before adding growth data.");
   }
 
+  const { weightKg, heightCm, headCm, ...requiredFields } = entry;
+
   return await addDoc(collection(db, "growthEntries"), {
-    ...entry,
+    ...requiredFields,
+    ...(weightKg !== undefined ? { weightKg } : {}),
+    ...(heightCm !== undefined ? { heightCm } : {}),
+    ...(headCm !== undefined ? { headCm } : {}),
     userId,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -123,8 +128,13 @@ export const updateGrowthEntry = async (
     throw new Error("This growth entry was not found or you cannot update it.");
   }
 
+  const { weightKg, heightCm, headCm, ...requiredFields } = entry;
+
   return await updateDoc(doc(db, "growthEntries", entryId), {
-    ...entry,
+    ...requiredFields,
+    ...(weightKg !== undefined ? { weightKg } : {}),
+    ...(heightCm !== undefined ? { heightCm } : {}),
+    ...(headCm !== undefined ? { headCm } : {}),
     updatedAt: serverTimestamp(),
   });
 };

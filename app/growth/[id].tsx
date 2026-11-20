@@ -28,6 +28,10 @@ import {
   toStoredLength,
   toStoredWeight,
 } from "../../src/utils/units";
+import {
+  isValidMeasurementDate,
+  parseOptionalPositiveNumber,
+} from "../../src/utils/growthValidation";
 
 export default function GrowthEntryDetail() {
   const router = useRouter();
@@ -102,8 +106,22 @@ export default function GrowthEntryDetail() {
   const handleSave = async () => {
     if (!id) return;
 
+    if (!isValidMeasurementDate(measuredAt)) {
+      setError("Enter a valid measurement date in YYYY-MM-DD format.");
+      return;
+    }
+
     if (!weightKg.trim() && !heightCm.trim() && !headCm.trim()) {
       setError("Add at least one measurement.");
+      return;
+    }
+
+    const parsedWeight = parseOptionalPositiveNumber(weightKg);
+    const parsedHeight = parseOptionalPositiveNumber(heightCm);
+    const parsedHead = parseOptionalPositiveNumber(headCm);
+
+    if (parsedWeight === null || parsedHeight === null || parsedHead === null) {
+      setError("Measurements must be positive numbers. Remove letters or symbols.");
       return;
     }
 
@@ -112,15 +130,18 @@ export default function GrowthEntryDetail() {
       setError("");
       await updateGrowthEntry(id, {
         measuredAt: measuredAt.trim(),
-        weightKg: parseOptionalNumber(weightKg, (value) =>
-          toStoredWeight(value, weightUnit)
-        ),
-        heightCm: parseOptionalNumber(heightCm, (value) =>
-          toStoredLength(value, lengthUnit)
-        ),
-        headCm: parseOptionalNumber(headCm, (value) =>
-          toStoredLength(value, lengthUnit)
-        ),
+        weightKg:
+          parsedWeight === undefined
+            ? undefined
+            : toStoredWeight(parsedWeight, weightUnit),
+        heightCm:
+          parsedHeight === undefined
+            ? undefined
+            : toStoredLength(parsedHeight, lengthUnit),
+        headCm:
+          parsedHead === undefined
+            ? undefined
+            : toStoredLength(parsedHead, lengthUnit),
       });
       router.replace("/growth");
     } catch (saveError) {
@@ -279,15 +300,6 @@ function GrowthInput({
       />
     </View>
   );
-}
-
-function parseOptionalNumber(
-  value: string,
-  transform: (value: number) => number = (numberValue) => numberValue
-) {
-  const parsedValue = Number.parseFloat(value);
-
-  return Number.isNaN(parsedValue) ? undefined : transform(parsedValue);
 }
 
 function formatInputValue(

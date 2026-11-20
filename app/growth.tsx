@@ -24,6 +24,10 @@ import {
   toStoredLength,
   toStoredWeight,
 } from "../src/utils/units";
+import {
+  isValidMeasurementDate,
+  parseOptionalPositiveNumber,
+} from "../src/utils/growthValidation";
 
 export default function GrowthDashboard() {
   const router = useRouter();
@@ -70,8 +74,22 @@ export default function GrowthDashboard() {
       return;
     }
 
+    if (!isValidMeasurementDate(measuredAt)) {
+      setMessage("Enter a valid measurement date in YYYY-MM-DD format.");
+      return;
+    }
+
     if (!weightKg.trim() && !heightCm.trim() && !headCm.trim()) {
       setMessage("Add at least one measurement.");
+      return;
+    }
+
+    const parsedWeight = parseOptionalPositiveNumber(weightKg);
+    const parsedHeight = parseOptionalPositiveNumber(heightCm);
+    const parsedHead = parseOptionalPositiveNumber(headCm);
+
+    if (parsedWeight === null || parsedHeight === null || parsedHead === null) {
+      setMessage("Measurements must be positive numbers. Remove letters or symbols.");
       return;
     }
 
@@ -82,15 +100,18 @@ export default function GrowthDashboard() {
       await addGrowthEntry({
         babyId: baby.id,
         measuredAt: measuredAt.trim(),
-        weightKg: parseOptionalNumber(weightKg, (value) =>
-          toStoredWeight(value, weightUnit)
-        ),
-        heightCm: parseOptionalNumber(heightCm, (value) =>
-          toStoredLength(value, lengthUnit)
-        ),
-        headCm: parseOptionalNumber(headCm, (value) =>
-          toStoredLength(value, lengthUnit)
-        ),
+        weightKg:
+          parsedWeight === undefined
+            ? undefined
+            : toStoredWeight(parsedWeight, weightUnit),
+        heightCm:
+          parsedHeight === undefined
+            ? undefined
+            : toStoredLength(parsedHeight, lengthUnit),
+        headCm:
+          parsedHead === undefined
+            ? undefined
+            : toStoredLength(parsedHead, lengthUnit),
       });
 
       setWeightKg("");
@@ -265,15 +286,6 @@ function GrowthCard({ label, value }: { label: string; value: string }) {
       <Text style={styles.cardLabel}>{label}</Text>
     </View>
   );
-}
-
-function parseOptionalNumber(
-  value: string,
-  transform: (value: number) => number = (numberValue) => numberValue
-) {
-  const parsedValue = Number.parseFloat(value);
-
-  return Number.isNaN(parsedValue) ? undefined : transform(parsedValue);
 }
 
 function formatWeight(valueKg: number | undefined, unit: "kg" | "lb") {
